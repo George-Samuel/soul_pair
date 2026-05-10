@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# IDE
+.idea/
+*.iml
+*.iws
+
+# Build outputs
+build/
+flutter_assets/
+.gradle/
+*.lock
+
+# Dart/Flutter
+.dart_tool/
+.pub/
+packages/
+pubspec.lock

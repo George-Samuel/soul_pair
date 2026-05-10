@@ -1,0 +1,37 @@
+  #  url_launcher: ^6.2.1
+  #  photo_manager: ^3.8.3  # Только для галереи
+  #  camera: ^0.10.6         # Только для камеры
+  #  wechat_assets_picker: ^10.4.2
+  #  wechat_camera_picker: ^7.1.2  # Для камеры
+  #  ^6.1.1  # Альтернатива image_picker
+  #  shared_preferences: ^2.2.2  # Добавляем для сохранения
+  #  file_picker: ^3.0.0  # Работает через браузер, не зависит от API
+  #  image_picker: ^0.8.1
+  #  media_picker: ^2.0.0  # Создан для API 33+
+  #  path_provider: ^2.1.0
+  #  flutter_secure_storage: ^9.0.0  # Поддерживает Android 14
+  #  image_picker: ^0.8.9+3  # Стабильная версия, работает с API 33+
+  #  provider: ^6.1.1
+  #  path_provider: ^2.0.15  # Более старая версия для Flutter 3.24
+  #  path: ^1.8.3            # Совместимая версия
+  #  form_builder_image_picker: ^2.0.0
+  #  image_picker_android: ^0.8.4+11
+  #  permission_handler: ^12.0.1
+  #  image_gallery_saver_plus: ^4.0.1
+  #  photo_picker: ^2.12.0
+  #  image_picker_modern: ^0.4.12+3
+  #  easy_image_picker: ^0.0.1
+  #  hive: ^2.2.3
+  #  hive_flutter: ^1.1.0
+  #  path_provider: ^2.0.14
+  #  share_plus: ^10.1.2   # или новее
+  #  seed_avatar: ^0.0.1  # Последнюю версию смотрите на pub.dev
+  #  dice_bear_flutter: ^0.0.1
+
+  #  nsfw_detector_flutter: ^2.0.0
+
+  # dependency_overrides:
+  #  collection: ^1.18.0
+
+  #  tflite_flutter: ^0.9.5
+  #  image: ^4.0.0
