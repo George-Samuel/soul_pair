@@ -1,0 +1,12 @@
+class AvatarGeneratorService {
+  static const String _workerUrl = 'https://soulpair-avatar.electron-geo.workers.dev';
+
+  static Future<String> generateAvatar(String prompt) async {
+    final response = await http.post(
+      Uri.parse(_workerUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'prompt': prompt}),
+    );
+    // ... обработка ответа
+  }
+}

@@ -1,0 +1,98 @@
+name: soul_pair
+description: "Soul Pair Mind - AI Dating App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  logger: ^2.6.2
+  channel: ^2.0.2
+  http: ^1.2.0
+  flutter_dotenv: ^5.1.0
+  google_generative_ai: ^0.4.7
+  flutter_simple_country_picker: ^0.2.1 # Или любой другой на ваш выбор
+  archive: ^3.4.10
+
+  # nsfw_detector_flutter: ^2.0.0
+
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/images/hybrid_path/trainers/
+    - assets/images/hybrid_path/trainers/trainer_anna.jpg
+    - assets/images/hybrid_path/trainers/trainer_maxim.jpg
+    - assets/images/hybrid_path/trainers/trainer_sofia.jpg
+    - assets/images/hybrid_path/matches/
+    - assets/images/hybrid_path/matches/match_alexey.jpg
+    - assets/images/hybrid_path/matches/match_maria.jpg
+    - assets/images/hybrid_path/matches/match_dmitry.jpg
+
+    - assets/images/characters/mark_astrophysicist.jpg
+    - assets/images/characters/dmitry_chef.jpg
+    - assets/images/characters/luke_helicopter_pilot.jpg
+    - assets/images/characters/carlos_winemaker.jpg
+    - assets/images/characters/kai_game_designer.jpg
+    - assets/images/characters/elina_psychotherapist.jpg
+    - assets/images/characters/jasmine_journalist.jpg
+    - assets/images/characters/alisa_art_curator.jpg
+    - assets/images/characters/roza_yacht_captain.jpg
+    - assets/images/characters/mia_eco_activist.jpg
+    - assets/images/characters/artem_photographer.jpg
+    - assets/images/characters/mikhail_architect.jpg
+    - assets/images/characters/nikolay_psychologist.jpg
+    - assets/images/characters/viktor_fitness.jpg
+    - assets/images/characters/evgeny_programmer.jpg
+
+    - assets/images/
+    - assets/images/puzzle/
+    - assets/images/Anna.jpg
+    - assets/images/Freya.jpg
+    - assets/images/Hana.jpg
+    - assets/images/Isabella.jpg
+    - assets/images/Kira.jpg
+    - assets/images/Liza.jpg
+    - assets/images/Natalie.jpg
+    - assets/images/Priya.jpg
+    - assets/images/Sakura.jpg
+    - assets/images/Sofia.jpg
+
+    - assets/images/Gallery_file_boy.jpg
+    - assets/images/Gallery_file_girl.jpg
+    - assets/images/Gallery_file_man.jpg
+    - assets/images/Photo_file_boy.jpg
+    - assets/images/Photo_file_girl.jpg
+    - assets/images/Photo_file_man.jpg
+
+# ========== Генерация иконок ==========
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "assets/icon/icon_background.png"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+
+# ========== Генерация сплеш-экрана ==========
+flutter_native_splash:
+  color: "#9C27B0"
+  image: "assets/icon/splash_logo.png"
+  android: true
+  ios: false
+  android_12:
+    color: "#9C27B0"
+    image: "assets/icon/splash_logo.png"

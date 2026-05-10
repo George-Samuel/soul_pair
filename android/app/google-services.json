@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "205392305224",
+    "project_id": "soulpair-eb33a",
+    "storage_bucket": "soulpair-eb33a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205392305224:android:f030035b30254550448c7d",
+        "android_client_info": {
+          "package_name": "com.george_samusevich.soul_pair"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAk1S4tDKS_vXz_n0FyrVevKNrudYyTXmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
