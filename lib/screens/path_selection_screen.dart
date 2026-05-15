@@ -37,7 +37,7 @@ class PathSelectionScreen extends StatelessWidget {
             icon: const Icon(Icons.switch_account),
             tooltip: 'Сменить пользователя',
             onPressed: () async {
-              await UserManager.switchToUser(null);
+              await UserManager.logout();   // ✅ выход
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,

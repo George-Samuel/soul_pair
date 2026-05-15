@@ -12,6 +12,7 @@ import 'test_filter_screen.dart';
 import 'admin_panel_screen.dart';
 import '../services/api_service.dart';
 
+
 class SettingsScreen extends StatefulWidget {
   final UserProfile userProfile;
   final Function(UserProfile)? onProfileUpdated;
@@ -816,7 +817,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.exit_to_app),
                   title: const Text('Сменить пользователя'),
                   onTap: () async {
-                    await UserManager.switchToUser(null);
+                    await UserManager.logout();
                     if (mounted) {
                       Navigator.pushReplacement(
                         context,

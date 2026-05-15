@@ -13,7 +13,8 @@ class UserSelectorScreen extends StatefulWidget {
 
 class _UserSelectorScreenState extends State<UserSelectorScreen> {
   List<String> _users = [];
-  final TextEditingController _newUserController = TextEditingController();
+  final TextEditingController _newUserNameController = TextEditingController();
+  final TextEditingController _newUserPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -29,22 +30,54 @@ class _UserSelectorScreenState extends State<UserSelectorScreen> {
   }
 
   Future<void> _createUser() async {
-    final name = _newUserController.text.trim();
-    if (name.isEmpty) return;
-    await UserManager.createUser(name);
-    await UserManager.switchToUser(name);
+    final name = _newUserNameController.text.trim();
+    final password = _newUserPasswordController.text.trim();
+    if (name.isEmpty || password.isEmpty) {
+      _showSnackBar('Введите имя и пароль');
+      return;
+    }
+    if (password.length < 6) {
+      _showSnackBar('Пароль должен быть не менее 6 символов');
+      return;
+    }
+    final success = await UserManager.createUser(name, password);
+    if (!success) {
+      _showSnackBar('Пользователь с таким именем уже существует');
+      return;
+    }
+    // После создания автоматически переключаемся на нового пользователя
+    await UserManager.switchToUser(name, password);
     await ProfileService.loadProfileFromFile();
-    _newUserController.clear();
+    _newUserNameController.clear();
+    _newUserPasswordController.clear();
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const EmailRegistrationScreen()),
-      );
+      // Если у пользователя ещё нет профиля, отправляем на регистрацию
+      if (ProfileService.currentProfile == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const EmailRegistrationScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PathSelectionScreen(
+              userProfile: ProfileService.currentProfile!,
+            ),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _selectUser(String userId) async {
-    await UserManager.switchToUser(userId);
+    final password = await _showPasswordDialog(userId);
+    if (password == null) return; // отмена
+    final success = await UserManager.switchToUser(userId, password);
+    if (!success) {
+      _showSnackBar('Неверный пароль');
+      return;
+    }
     await ProfileService.loadProfileFromFile();
     if (mounted) {
       final profile = ProfileService.currentProfile;
@@ -58,17 +91,69 @@ class _UserSelectorScreenState extends State<UserSelectorScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const EmailRegistrationScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const EmailRegistrationScreen()),
         );
       }
     }
   }
 
+  Future<String?> _showPasswordDialog(String userId) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Вход для $userId'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Пароль',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Войти'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _deleteUser(String userId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удалить пользователя?'),
+        content: Text('Все данные пользователя $userId будут удалены без возможности восстановления.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
     await UserManager.deleteUser(userId);
     await _loadUsers();
+    _showSnackBar('Пользователь удалён');
   }
 
   @override
@@ -79,22 +164,35 @@ class _UserSelectorScreenState extends State<UserSelectorScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _newUserController,
-                    decoration: const InputDecoration(
-                      labelText: 'Имя нового пользователя',
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _newUserNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Имя нового пользователя',
+                        prefixIcon: Icon(Icons.person),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _newUserPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Пароль (не менее 6 символов)',
+                        prefixIcon: Icon(Icons.lock),
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _createUser,
+                      child: const Text('Создать'),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _createUser,
-                  child: const Text('Создать'),
-                ),
-              ],
+              ),
             ),
           ),
           Expanded(
@@ -103,6 +201,7 @@ class _UserSelectorScreenState extends State<UserSelectorScreen> {
               itemBuilder: (context, index) {
                 final userId = _users[index];
                 return ListTile(
+                  leading: const Icon(Icons.account_circle),
                   title: Text(userId),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
