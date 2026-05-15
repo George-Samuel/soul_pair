@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/email_registration_screen.dart';
 import 'screens/path_selection_screen.dart';
-import 'screens/user_selector_screen.dart';
+import 'screens/login_screen.dart';          // <-- импорт
 import 'theme.dart';
 import 'utils/logger.dart';
 import 'models/user_model.dart';
@@ -64,15 +64,16 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     AppLogger.i('Создание MaterialApp...');
 
+    // Решаем, какой экран показать первым
     Widget initialScreen;
-    if (UserManager.currentUserId == null) {
-      initialScreen = const UserSelectorScreen();
-    } else if (ProfileService.currentProfile != null) {
+    if (ProfileService.currentProfile != null) {
+      // Если профиль уже есть (пользователь залогинен) → сразу главный экран
       initialScreen = PathSelectionScreen(
         userProfile: ProfileService.currentProfile!,
       );
     } else {
-      initialScreen = const EmailRegistrationScreen();
+      // Иначе показываем экран входа/регистрации
+      initialScreen = const LoginScreen();
     }
 
     return MaterialApp(

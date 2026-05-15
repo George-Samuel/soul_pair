@@ -175,4 +175,10 @@ class ProfileService {
     }
     return 'Пользователь';
   }
+  static Future<void> saveProfile(UserProfile profile) async {
+    _currentProfile = profile;
+    await _saveToFile();
+    _notifyListeners();
+    print('✅ [ProfileService] профиль сохранён (saveProfile)');
+  }
 }

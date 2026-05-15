@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
-import 'storage_path.dart';  // ваш канал к filesDir
+import 'package:crypto/crypto.dart';
+import 'storage_path.dart';
 
 class UserManager {
-  // Пути получаем асинхронно через StoragePath
   static Future<String> get _usersFilePath async {
     final baseDir = await StoragePath.getFilesDir();
     return '$baseDir/users.json';
@@ -14,7 +14,7 @@ class UserManager {
     return '$baseDir/active_user.txt';
   }
 
-  static List<String> _users = [];
+  static Map<String, String> _usersPasswords = {};
   static String? _currentUserId;
 
   static Future<void> loadUsers() async {
@@ -22,18 +22,30 @@ class UserManager {
     if (await usersFile.exists()) {
       try {
         final json = await usersFile.readAsString();
-        final List<dynamic> list = jsonDecode(json) as List<dynamic>;
-        _users = list.cast<String>();
+        final decoded = jsonDecode(json);
+        if (decoded is Map<String, dynamic>) {
+          _usersPasswords = {};
+          decoded.forEach((key, value) {
+            if (value is String) {
+              _usersPasswords[key] = value;
+            }
+          });
+        } else {
+          _usersPasswords = {};
+        }
       } catch (e) {
-        _users = [];
+        _usersPasswords = {};
       }
     } else {
-      _users = [];
+      _usersPasswords = {};
     }
 
     final activeFile = File(await _activeUserIdFilePath);
     if (await activeFile.exists()) {
       _currentUserId = await activeFile.readAsString();
+      if (!_usersPasswords.containsKey(_currentUserId)) {
+        _currentUserId = null;
+      }
     } else {
       _currentUserId = null;
     }
@@ -41,7 +53,7 @@ class UserManager {
 
   static Future<void> _saveUsers() async {
     final usersFile = File(await _usersFilePath);
-    final json = jsonEncode(_users);
+    final json = jsonEncode(_usersPasswords);
     await usersFile.writeAsString(json);
   }
 
@@ -54,41 +66,38 @@ class UserManager {
     }
   }
 
-  static List<String> getUsers() => List.unmodifiable(_users);
+  static List<String> getUsers() => _usersPasswords.keys.toList();
   static String? get currentUserId => _currentUserId;
 
-  static Future<void> createUser(String userId) async {
-    if (!_users.contains(userId)) {
-      _users.add(userId);
-      await _saveUsers();
+  static Future<bool> createUser(String userId, String password) async {
+    if (_usersPasswords.containsKey(userId)) return false;
+    final hashedPassword = sha256.convert(utf8.encode(password)).toString();
+    _usersPasswords[userId] = hashedPassword;
+    await _saveUsers();
 
-      // Создаём папку пользователя в постоянном хранилище (для единообразия)
-      final baseDir = await StoragePath.getFilesDir();
-      final userDir = Directory('$baseDir/user_$userId');
-      if (!await userDir.exists()) {
-        await userDir.create(recursive: true);
-      }
+    final baseDir = await StoragePath.getFilesDir();
+    final userDir = Directory('$baseDir/user_$userId');
+    if (!await userDir.exists()) {
+      await userDir.create(recursive: true);
     }
+    return true;
   }
 
-  static Future<void> switchToUser(String? userId) async {
-    if (userId == null) {
-      _currentUserId = null;
-      await _saveActiveUser();
-      return;
-    }
-    if (_users.contains(userId)) {
+  static Future<bool> switchToUser(String userId, String password) async {
+    final hashedPassword = sha256.convert(utf8.encode(password)).toString();
+    if (_usersPasswords.containsKey(userId) && _usersPasswords[userId] == hashedPassword) {
       _currentUserId = userId;
       await _saveActiveUser();
+      return true;
     }
+    return false;
   }
 
   static Future<void> deleteUser(String userId) async {
-    if (_users.contains(userId)) {
-      _users.remove(userId);
+    if (_usersPasswords.containsKey(userId)) {
+      _usersPasswords.remove(userId);
       await _saveUsers();
 
-      // Удаляем папку пользователя из постоянного хранилища
       final baseDir = await StoragePath.getFilesDir();
       final userDir = Directory('$baseDir/user_$userId');
       if (await userDir.exists()) {
@@ -100,5 +109,10 @@ class UserManager {
         await _saveActiveUser();
       }
     }
+  }
+
+  static Future<void> logout() async {
+    _currentUserId = null;
+    await _saveActiveUser();
   }
 }

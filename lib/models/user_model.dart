@@ -26,6 +26,7 @@ class UserProfile {
   final String? country;
   final String? city;
   final bool isAdmin;
+  final String? password; // 🆕 временное поле для регистрации
   final Map<String, int>? values; // шкала ценностей (0-10)
 
   // 🆕 Поля для теста личности
@@ -60,12 +61,14 @@ class UserProfile {
     this.values,
     this.typeScores,
     this.dominantType,
+    this.password, // 🆕
   })  : id = id ?? UserProfile.generateIdFromEmail(email),
         name = name ?? _extractNameFromEmail(email);
 
   Map<String, dynamic> toMap() {
     return {
       'email': email,
+      if (password != null) 'password': password, // 🆕
       'birth_date': birthDate,
       'gender': gender,
       'education': education,
@@ -151,6 +154,7 @@ class UserProfile {
 
   UserProfile copyWith({
     String? email,
+    String? password, // 🆕
     String? birthDate,
     String? gender,
     String? education,

@@ -5,28 +5,67 @@ import '../models/user_model.dart';
 import '../services/profile_service.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.100.13:5000';
+  static const String baseUrl = 'https://soul-backend-5pcj.onrender.com';
 
-  // ===== РЕГИСТРАЦИЯ И ПРОФИЛИ =====
+  // ===== АУТЕНТИФИКАЦИЯ =====
   static Future<bool> registerProfile(UserProfile profile) async {
     try {
+      final url = Uri.parse('$baseUrl/register');
+      print('🌐 Регистрация: $url');
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
+        url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(profile.toMap()),
       );
-      return response.statusCode == 200;
-    } catch (e) { print(e); return false; }
+      if (response.statusCode == 200) {
+        print('✅ Регистрация успешна');
+        return true;
+      } else {
+        print('❌ Ошибка регистрации: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Исключение при регистрации: $e');
+      return false;
+    }
   }
 
+  static Future<bool> login(String userId, String password) async {
+    try {
+      final url = Uri.parse('$baseUrl/login');
+      print('🌐 Вход: $url');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id': userId, 'password': password}),
+      );
+      if (response.statusCode == 200) {
+        print('✅ Вход выполнен');
+        return true;
+      } else {
+        print('❌ Ошибка входа: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Исключение при входе: $e');
+      return false;
+    }
+  }
+
+  // ===== ПРОФИЛИ =====
   static Future<Map<String, dynamic>?> fetchProfile(String userId) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/profile/$userId'));
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        print('❌ Ошибка получения профиля: ${response.statusCode}');
+        return null;
       }
-    } catch (e) { print(e); }
-    return null;
+    } catch (e) {
+      print(e);
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>> fetchOtherProfiles(String myId) async {
@@ -37,7 +76,10 @@ class ApiService {
         if (decoded is Map<String, dynamic>) return decoded;
       }
       return {};
-    } catch (e) { print(e); return {}; }
+    } catch (e) {
+      print(e);
+      return {};
+    }
   }
 
   static Future<Map<String, dynamic>> fetchAllProfiles() async {
@@ -48,7 +90,10 @@ class ApiService {
         if (decoded is Map<String, dynamic>) return decoded;
       }
       return {};
-    } catch (e) { print(e); return {}; }
+    } catch (e) {
+      print(e);
+      return {};
+    }
   }
 
   // ===== СООБЩЕНИЯ =====
@@ -60,7 +105,10 @@ class ApiService {
         body: jsonEncode({'from': fromId, 'to': toId, 'text': text}),
       );
       return response.statusCode == 200;
-    } catch (e) { print(e); return false; }
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 
   static Future<List<Map<String, dynamic>>> getDialog({required String user1, required String user2, int lastId = 0}) async {
@@ -74,7 +122,10 @@ class ApiService {
         }
       }
       return [];
-    } catch (e) { print(e); return []; }
+    } catch (e) {
+      print(e);
+      return [];
+    }
   }
 
   // ===== ОНЛАЙН =====
@@ -85,7 +136,9 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId}),
       );
-    } catch (e) { print(e); }
+    } catch (e) {
+      print(e);
+    }
   }
 
   static Future<Set<String>> fetchOnlineUsers() async {
@@ -95,10 +148,13 @@ class ApiService {
         final decoded = jsonDecode(response.body);
         if (decoded is List) return {for (var e in decoded) e.toString()};
       }
-    } catch (e) { print(e); }
+    } catch (e) {
+      print(e);
+    }
     return {};
   }
 
+  // ===== НЕПРОЧИТАННЫЕ =====
   static Future<Map<String, int>> fetchUnreadCounts(String userId) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/unread?user_id=$userId'));
@@ -108,7 +164,9 @@ class ApiService {
           return decoded.map((k, v) => MapEntry(k, v as int));
         }
       }
-    } catch (e) { print(e); }
+    } catch (e) {
+      print(e);
+    }
     return {};
   }
 
@@ -119,7 +177,9 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'user_id': userId, 'from_user': fromUserId, 'last_read_id': lastReadId}),
       );
-    } catch (e) { print(e); }
+    } catch (e) {
+      print(e);
+    }
   }
 
   // ===== АДМИНИСТРИРОВАНИЕ =====
@@ -131,7 +191,10 @@ class ApiService {
         body: jsonEncode({'admin_id': adminId, 'user_id': userId}),
       );
       return response.statusCode == 200;
-    } catch (e) { print(e); return false; }
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 
   static Future<bool> deleteUser(String adminId, String userId) async {
@@ -142,7 +205,10 @@ class ApiService {
         body: jsonEncode({'admin_id': adminId, 'user_id': userId}),
       );
       return response.statusCode == 200;
-    } catch (e) { print(e); return false; }
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 
   static Future<bool> reportMessage(String fromUserId, String reportedUserId, String messageId, String reason) async {
@@ -153,7 +219,10 @@ class ApiService {
         body: jsonEncode({'from_user': fromUserId, 'reported_user': reportedUserId, 'message_id': messageId, 'reason': reason}),
       );
       return response.statusCode == 200;
-    } catch (e) { print(e); return false; }
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 
   static Future<List<Map<String, dynamic>>> fetchReports() async {
@@ -163,7 +232,9 @@ class ApiService {
         final dynamic body = jsonDecode(response.body);
         if (body is List) return body.whereType<Map<String, dynamic>>().toList();
       }
-    } catch (e) { print(e); }
+    } catch (e) {
+      print(e);
+    }
     return [];
   }
 
@@ -175,7 +246,10 @@ class ApiService {
         body: jsonEncode({'admin_id': adminId, 'report_id': reportId}),
       );
       return response.statusCode == 200;
-    } catch (e) { print(e); return false; }
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 
   static Future<Map<String, dynamic>> fetchStats() async {
@@ -186,11 +260,13 @@ class ApiService {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) return decoded;
       }
-    } catch (e) { print(e); }
+    } catch (e) {
+      print(e);
+    }
     return {};
   }
 
-  // ========== NSFW МОДЕРАЦИЯ ==========
+  // ===== NSFW (если нужно) =====
   static Future<bool> checkNsfw(File imageFile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/check_nsfw'));
@@ -201,11 +277,11 @@ class ApiService {
         return data['safe'] == true;
       } else {
         print('NSFW check failed with status ${response.statusCode}, allowing upload');
-        return true; // разрешаем при ошибке сервера
+        return true;
       }
     } catch (e) {
       print('NSFW check exception: $e, allowing upload');
-      return true; // разрешаем при любом исключении
+      return true;
     }
   }
 }
