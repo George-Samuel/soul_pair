@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
 
@@ -12,10 +13,17 @@ class ApiService {
     try {
       final url = Uri.parse('$baseUrl/register');
       print('🌐 Регистрация: $url');
+      final data = profile.toMap();
+      print('🔑 Пароль из профиля: "${profile.password}" (длина ${profile.password?.length ?? 0})');
+      if (profile.password == null || profile.password!.isEmpty) {
+        print('❌ Пароль отсутствует! Регистрация невозможна.');
+        return false;
+      }
+      print('📦 Отправляемые данные: $data');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(profile.toMap()),
+        body: jsonEncode(data),
       );
       if (response.statusCode == 200) {
         print('✅ Регистрация успешна');
@@ -48,6 +56,40 @@ class ApiService {
       }
     } catch (e) {
       print('❌ Исключение при входе: $e');
+      return false;
+    }
+  }
+
+  // ===== ВХОД ЧЕРЕЗ GOOGLE =====
+  static Future<bool> signInWithGoogle() async {
+    try {
+      final GoogleSignIn _googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+      );
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return false;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      if (idToken == null) return false;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/google'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'idToken': idToken}),
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final String userId = data['user_id'] as String;
+        final profileMap = await fetchProfile(userId);
+        if (profileMap != null) {
+          final profile = UserProfile.fromMap(profileMap);
+          await ProfileService.updateProfile(profile);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('❌ Ошибка входа через Google: $e');
       return false;
     }
   }
@@ -266,7 +308,7 @@ class ApiService {
     return {};
   }
 
-  // ===== NSFW (если нужно) =====
+  // ===== NSFW =====
   static Future<bool> checkNsfw(File imageFile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/check_nsfw'));
