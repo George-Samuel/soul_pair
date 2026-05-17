@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../services/profile_service.dart';
 import 'path_selection_screen.dart';
 import 'email_registration_screen.dart';
-import '../models/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,14 +33,15 @@ class _LoginScreenState extends State<LoginScreen> {
       final profileData = await ApiService.fetchProfile(email);
       if (profileData != null) {
         final profile = UserProfile.fromMap(profileData);
-        await ProfileService.saveProfile(profile);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PathSelectionScreen(userProfile: profile),
-          ),
-        );
+        await ProfileService.updateProfile(profile);
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PathSelectionScreen(userProfile: profile),
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Не удалось загрузить профиль')),
@@ -49,6 +50,35 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Неверный email или пароль')),
+      );
+    }
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() => _isLoading = true);
+    final success = await ApiService.signInWithGoogle();
+    setState(() => _isLoading = false);
+    if (success && context.mounted) {
+      if (ProfileService.currentProfile != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PathSelectionScreen(
+              userProfile: ProfileService.currentProfile!,
+            ),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const EmailRegistrationScreen(),
+          ),
+        );
+      }
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось войти через Google')),
       );
     }
   }
@@ -77,24 +107,40 @@ class _LoginScreenState extends State<LoginScreen> {
             if (_isLoading)
               const CircularProgressIndicator()
             else
-              ElevatedButton(
-                onPressed: _login,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                ),
-                child: const Text('Войти'),
-              ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const EmailRegistrationScreen(),
+              Column(
+                children: [
+                  ElevatedButton(
+                    onPressed: _login,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text('Войти'),
                   ),
-                );
-              },
-              child: const Text('Нет аккаунта? Зарегистрироваться'),
-            ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _googleSignIn,
+                    icon: const Icon(Icons.g_mobiledata),
+                    label: const Text('Войти через Google'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EmailRegistrationScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Нет аккаунта? Зарегистрироваться'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
