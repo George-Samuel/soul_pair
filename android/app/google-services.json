@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "205392305224",
-    "project_id": "soulpair-eb33a",
-    "storage_bucket": "soulpair-eb33a.firebasestorage.app"
+    "project_number": "69193608569",
+    "project_id": "soul-pair-a1780",
+    "storage_bucket": "soul-pair-a1780.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:205392305224:android:f030035b30254550448c7d",
+        "mobilesdk_app_id": "1:69193608569:android:f45f6bec3e5369445193a8",
         "android_client_info": {
           "package_name": "com.george_samusevich.soul_pair"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAk1S4tDKS_vXz_n0FyrVevKNrudYyTXmY"
+          "current_key": "AIzaSyCY6Rm2WHxG3S0OafBwflKxsAPSOG2ysXc"
         }
       ],
       "services": {

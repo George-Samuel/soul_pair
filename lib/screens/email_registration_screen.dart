@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'user_data_collection_screen.dart';
+import '../services/profile_service.dart';
 
 class EmailRegistrationScreen extends StatefulWidget {
   const EmailRegistrationScreen({super.key});
@@ -20,12 +21,19 @@ class _EmailRegistrationScreenState extends State<EmailRegistrationScreen> {
 
   void _register(BuildContext context) {
     if (!_isValid) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Сохраняем пароль в сервисе (надёжное место)
+    ProfileService.setTempPassword(password);
+    print('🔑 [EmailReg] Сохраняем пароль: "$password" (длина ${password.length})');
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => UserDataCollectionScreen(
-          userEmail: _emailController.text.trim(),
+          userEmail: email,
+          userPassword: password,
         ),
       ),
     );
@@ -36,8 +44,8 @@ class _EmailRegistrationScreenState extends State<EmailRegistrationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Soul Pair'),
-        backgroundColor: Colors.purple, // 🔹 фиолетовая полоса
-        foregroundColor: Colors.white,   // 🔹 белый текст и иконки
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -48,11 +56,7 @@ class _EmailRegistrationScreenState extends State<EmailRegistrationScreen> {
               padding: const EdgeInsets.symmetric(vertical: 30),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.favorite,
-                    size: 60,
-                    color: Colors.purple,
-                  ),
+                  const Icon(Icons.favorite, size: 60, color: Colors.purple),
                   const SizedBox(height: 20),
                   const Text(
                     'Знакомства для серьёзных отношений',

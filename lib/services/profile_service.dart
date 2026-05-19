@@ -10,6 +10,21 @@ class ProfileService {
   static UserProfile? _currentProfile;
   static final List<VoidCallback> _listeners = [];
 
+  static String? _tempPassword;
+
+  static void setTempPassword(String password) {
+    _tempPassword = password;
+    print('🔑 [ProfileService] Пароль сохранён временно: "$password" (длина ${password.length})');
+  }
+
+  static String? getTempPassword() {
+    return _tempPassword;
+  }
+
+  static void clearTempPassword() {
+    _tempPassword = null;
+  }
+
   static UserProfile? get currentProfile => _currentProfile;
   static bool get isRegistered => _currentProfile != null && _currentProfile!.name.isNotEmpty;
   static double get completionPercentage => _currentProfile?.profileCompletion ?? 0.0;
@@ -53,14 +68,13 @@ class ProfileService {
       final Map<String, dynamic> map = jsonDecode(json) as Map<String, dynamic>;
       _currentProfile = UserProfile.fromMap(map);
 
-      // Проверяем существование аватара (только для файловых путей, не для assets)
       final avatarPath = _currentProfile?.selectedAvatar;
       if (avatarPath != null && avatarPath.isNotEmpty && !avatarPath.startsWith('assets/')) {
         final exists = await File(avatarPath).exists();
         if (!exists) {
           print('⚠️ [ProfileService] Аватар не найден, сбрасываю: $avatarPath');
           _currentProfile = _currentProfile!.copyWith(selectedAvatar: null);
-          await _saveToFile(); // сохраняем исправленный профиль
+          await _saveToFile();
         }
       }
 
@@ -154,6 +168,12 @@ class ProfileService {
     _notifyListeners();
   }
 
+  static Future<void> saveProfile(UserProfile profile) async {
+    _currentProfile = profile;
+    await _saveToFile();
+    _notifyListeners();
+  }
+
   static void addListener(VoidCallback listener) => _listeners.add(listener);
   static void removeListener(VoidCallback listener) => _listeners.remove(listener);
 
@@ -175,10 +195,5 @@ class ProfileService {
     }
     return 'Пользователь';
   }
-  static Future<void> saveProfile(UserProfile profile) async {
-    _currentProfile = profile;
-    await _saveToFile();
-    _notifyListeners();
-    print('✅ [ProfileService] профиль сохранён (saveProfile)');
-  }
+
 }
