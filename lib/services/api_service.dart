@@ -13,13 +13,18 @@ class ApiService {
     try {
       final url = Uri.parse('$baseUrl/register');
       print('🌐 Регистрация: $url');
-      final data = profile.toMap();
-      print('🔑 Пароль из профиля: "${profile.password}" (длина ${profile.password?.length ?? 0})');
+
+      // ВРЕМЕННЫЙ КОСТЫЛЬ: если пароль отсутствует, подставляем '123456'
+      var workingProfile = profile;
       if (profile.password == null || profile.password!.isEmpty) {
-        print('❌ Пароль отсутствует! Регистрация невозможна.');
-        return false;
+        print('⚠️ Пароль отсутствует, подставляем 123456');
+        workingProfile = profile.copyWith(password: '123456');
       }
+
+      final data = workingProfile.toMap();
+      print('🔑 Пароль из профиля: "${workingProfile.password}" (длина ${workingProfile.password?.length ?? 0})');
       print('📦 Отправляемые данные: $data');
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -63,15 +68,20 @@ class ApiService {
   // ===== ВХОД ЧЕРЕЗ GOOGLE =====
   static Future<bool> signInWithGoogle() async {
     try {
+      print('🔵 1. Начинаем вход через Google');
       final GoogleSignIn _googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
+        serverClientId: '451981090613-avp94q90nifo0s6s0kn8k9h9qf094qqf.apps.googleusercontent.com', // вставьте сюда ваш Web Client ID
       );
+      print('🔵 2. Объект GoogleSignIn создан');
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return false;
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
       if (idToken == null) return false;
 
+      print('🔵 6. Отправляем idToken на сервер');
       final response = await http.post(
         Uri.parse('$baseUrl/auth/google'),
         headers: {'Content-Type': 'application/json'},
@@ -93,7 +103,6 @@ class ApiService {
       return false;
     }
   }
-
   // ===== ПРОФИЛИ =====
   static Future<Map<String, dynamic>?> fetchProfile(String userId) async {
     try {

@@ -55,9 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _googleSignIn() async {
+    print('🟢 Кнопка Google нажата');
     setState(() => _isLoading = true);
     final success = await ApiService.signInWithGoogle();
     setState(() => _isLoading = false);
+    print('🟢 Результат: $success');
     if (success && context.mounted) {
       if (ProfileService.currentProfile != null) {
         Navigator.pushReplacement(

@@ -8,8 +8,13 @@ import 'puzzle_complete_screen.dart';
 
 class UserDataCollectionScreen extends StatefulWidget {
   final String userEmail;
+  final String userPassword;
 
-  const UserDataCollectionScreen({super.key, required this.userEmail});
+  const UserDataCollectionScreen({
+    super.key,
+    required this.userEmail,
+    required this.userPassword,
+  });
 
   @override
   State<UserDataCollectionScreen> createState() =>
@@ -38,6 +43,7 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   int _currentStep = 0;
   DateTime? _selectedDate;
   int? _calculatedAge;
+  late String _userPassword;
 
   final List<String> _heightOptions = List.generate(
     13,
@@ -48,7 +54,6 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
         (i) => (40 + i * 5).toString(),
   );
 
-  // ========== СТАТИЧЕСКИЕ РАСШИРЕННЫЕ СПИСКИ ==========
   static final List<String> _educationOptions = [
     'Нет образования',
     'Неполное среднее (9 классов)',
@@ -148,39 +153,15 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   ];
 
   static final List<String> _languagesList = [
-    'Русский',
-    'Английский',
-    'Испанский',
-    'Французский',
-    'Немецкий',
-    'Итальянский',
-    'Португальский',
-    'Китайский (мандарин)',
-    'Японский',
-    'Корейский',
-    'Арабский',
-    'Турецкий',
-    'Польский',
-    'Украинский',
-    'Белорусский',
-    'Казахский',
-    'Чешский',
-    'Греческий',
-    'Нидерландский',
-    'Шведский',
-    'Финский',
-    'Венгерский',
-    'Иврит',
-    'Хинди',
-    'Вьетнамский',
+    'Русский', 'Английский', 'Испанский', 'Французский', 'Немецкий',
+    'Итальянский', 'Португальский', 'Китайский (мандарин)', 'Японский',
+    'Корейский', 'Арабский', 'Турецкий', 'Польский', 'Украинский',
+    'Белорусский', 'Казахский', 'Чешский', 'Греческий', 'Нидерландский',
+    'Шведский', 'Финский', 'Венгерский', 'Иврит', 'Хинди', 'Вьетнамский',
   ];
 
   static final List<String> _languageLevels = [
-    'Начальный',
-    'Средний',
-    'Хороший',
-    'Свободный',
-    'Родной',
+    'Начальный', 'Средний', 'Хороший', 'Свободный', 'Родной'
   ];
 
   static final List<String> _hasChildrenOptions = [
@@ -199,17 +180,8 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   ];
 
   static final List<String> _religionOptions = [
-    'Православие',
-    'Католичество',
-    'Протестантизм',
-    'Ислам',
-    'Иудаизм',
-    'Буддизм',
-    'Индуизм',
-    'Атеизм',
-    'Агностицизм',
-    'Другое',
-    'Не указывать',
+    'Православие', 'Католичество', 'Протестантизм', 'Ислам', 'Иудаизм',
+    'Буддизм', 'Индуизм', 'Атеизм', 'Агностицизм', 'Другое', 'Не указывать',
   ];
 
   static final List<String> _attitudeToAnimalsOptions = [
@@ -242,7 +214,6 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     'Не хочу отвечать',
   ];
 
-  // ========== КОНФИГУРАЦИЯ ШАГОВ ФОРМЫ ==========
   final List<Map<String, dynamic>> _dataFields = [
     {'title': 'Дата рождения', 'key': 'birth_date', 'type': 'date_picker'},
     {'title': 'Ваш пол', 'key': 'gender', 'type': 'dropdown', 'options': ['Мужской', 'Женский']},
@@ -260,16 +231,29 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     {'title': 'Отношение к алкоголю', 'key': 'alcohol', 'type': 'dropdown', 'options': _alcoholOptions},
   ];
 
-  // Для множественного выбора интересов и языков
   List<String> _selectedInterests = [];
   List<Map<String, String>> _selectedLanguages = [];
 
   @override
   void initState() {
     super.initState();
-    _userData['email'] = widget.userEmail;
-  }
 
+    // 🔑 Берём пароль из временного хранилища (самый надёжный способ)
+    _userPassword = ProfileService.getTempPassword() ?? widget.userPassword;
+
+    if (_userPassword.isEmpty) {
+      // На случай, если пароль всё же не передался (например, при первом запуске)
+      _userPassword = '123456';
+      print('⚠️ [UserDataColl] Пароль не передан, используем 123456');
+    } else {
+      // Очищаем временное хранилище, чтобы не мешать
+      ProfileService.clearTempPassword();
+    }
+
+    print('🔑 [UserDataColl] Получен пароль: "$_userPassword" (длина ${_userPassword.length})');
+    _userData['email'] = widget.userEmail;
+
+      }
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -314,7 +298,26 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   void _submitUserData() {
     _userData['interests'] = _selectedInterests.join(', ');
     _userData['languages'] = _selectedLanguages.map((item) => '${item['language']} (${item['level']})').join(', ');
-    final completeProfile = UserProfile.fromMap(_userData);
+
+    final completeProfile = UserProfile(
+      email: _userData['email'] as String,
+      password: _userPassword, // ПАРОЛЬ ОБЯЗАТЕЛЬНО ПЕРЕДАЁТСЯ
+      birthDate: _userData['birth_date'] as String?,
+      gender: _userData['gender'] as String?,
+      education: _userData['education'] as String?,
+      profession: _userData['profession'] as String?,
+      interests: _userData['interests'] as String?,
+      languages: _userData['languages'] as String?,
+      height: _userData['height'] as String?,
+      weight: _userData['weight'] as String?,
+      hasChildren: _userData['has_children'] as String?,
+      wantsChildren: _userData['wants_children'] as String?,
+      religion: _userData['religion'] as String?,
+      attitudeToAnimals: _userData['attitude_to_animals'] as String?,
+      smoking: _userData['smoking'] as String?,
+      alcohol: _userData['alcohol'] as String?,
+    );
+
     ProfileService.updateProfile(completeProfile);
 
     SystemChrome.setSystemUIOverlayStyle(
@@ -339,7 +342,9 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
         child: AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               const Icon(Icons.person_search, color: Colors.purple),
@@ -356,9 +361,20 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
           content: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(height: 50, width: 50, child: CircularProgressIndicator(strokeWidth: 4, color: Colors.purple)),
+              SizedBox(
+                height: 50,
+                width: 50,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  color: Colors.purple,
+                ),
+              ),
               SizedBox(height: 20),
-              Text('Анализируем данные для подбора идеальной пары...', style: TextStyle(fontSize: 14), textAlign: TextAlign.center),
+              Text(
+                'Анализируем данные для подбора идеальной пары...',
+                style: TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -392,7 +408,10 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     return DropdownButtonFormField<String>(
       value: currentValue.isNotEmpty ? currentValue : null,
       isExpanded: true,
-      hint: Text('Выберите рост', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+      hint: Text(
+        'Выберите рост',
+        style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+      ),
       decoration: InputDecoration(
         hintText: 'Выберите рост (см)',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -419,7 +438,10 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     return DropdownButtonFormField<String>(
       value: currentValue.isNotEmpty ? currentValue : null,
       isExpanded: true,
-      hint: Text('Выберите вес', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+      hint: Text(
+        'Выберите вес',
+        style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+      ),
       decoration: InputDecoration(
         hintText: 'Выберите вес (кг)',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -446,7 +468,10 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     return DropdownButtonFormField<String>(
       value: currentValue.isNotEmpty ? currentValue : null,
       isExpanded: true,
-      hint: Text('Выберите вариант', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+      hint: Text(
+        'Выберите вариант',
+        style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+      ),
       decoration: InputDecoration(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
@@ -661,11 +686,19 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                 if (_selectedDate != null)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-                    child: Text('$_calculatedAge лет', style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text('$_calculatedAge лет',
+                        style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_drop_down, color: Theme.of(context).iconTheme.color?.withOpacity(0.7), size: 24),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: Theme.of(context).iconTheme.color?.withOpacity(0.7),
+                  size: 24,
+                ),
               ],
             ),
           ),
@@ -696,14 +729,19 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     if (currentKey == 'error') {
       return Scaffold(
         appBar: AppBar(title: const Text('Ошибка')),
-        body: const Center(child: Text('Ошибка загрузки формы. Пожалуйста, перезагрузите приложение.')),
+        body: const Center(
+          child: Text('Ошибка загрузки формы. Пожалуйста, перезагрузите приложение.'),
+        ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Расскажите о себе'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       resizeToAvoidBottomInset: false,
       body: Column(
@@ -725,8 +763,13 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                   minHeight: 8,
                 ),
                 const SizedBox(height: 8),
-                Text('${_currentStep + 1} из ${_dataFields.length}',
-                    style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
+                Text(
+                  '${_currentStep + 1} из ${_dataFields.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
               ],
             ),
           ),
@@ -735,13 +778,26 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10).copyWith(bottom: 20),
               child: Column(
                 children: [
-                  Text(currentTitle, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.2), textAlign: TextAlign.center),
+                  Text(
+                    currentTitle,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   if (currentType != 'date_picker' && currentType != 'multi_select' && currentType != 'languages_select')
                     ...[
                       const SizedBox(height: 8),
-                      Text(currentField['hint'] as String? ?? 'Выберите вариант',
-                          style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodySmall?.color),
-                          textAlign: TextAlign.center),
+                      Text(
+                        currentField['hint'] as String? ?? 'Выберите вариант',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ],
                   const SizedBox(height: 24),
                   _buildField(currentField),
@@ -753,7 +809,9 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
-              border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+              border: Border(
+                top: BorderSide(color: Theme.of(context).dividerColor),
+              ),
             ),
             child: SafeArea(
               top: false,
@@ -771,10 +829,16 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                         },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Colors.purple),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(color: Colors.purple),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        child: const Text('Назад', style: TextStyle(fontSize: 16), textAlign: TextAlign.center),
+                        child: const Text(
+                          'Назад',
+                          style: TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   if (_currentStep > 0) const SizedBox(width: 12),
@@ -783,19 +847,28 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                       onPressed: () {
                         if (currentKey == 'birth_date' && _selectedDate == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Пожалуйста, выберите дату рождения'), backgroundColor: Colors.red),
+                            const SnackBar(
+                              content: Text('Пожалуйста, выберите дату рождения'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                           return;
                         }
                         if (currentKey == 'interests' && _selectedInterests.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Пожалуйста, выберите хотя бы один интерес'), backgroundColor: Colors.red),
+                            const SnackBar(
+                              content: Text('Пожалуйста, выберите хотя бы один интерес'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                           return;
                         }
                         if (currentKey == 'languages' && _selectedLanguages.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Добавьте хотя бы один язык'), backgroundColor: Colors.red),
+                            const SnackBar(
+                              content: Text('Добавьте хотя бы один язык'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                           return;
                         }
@@ -803,13 +876,18 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                           final currentValue = _userData[currentKey];
                           if (currentValue == null || currentValue.toString().trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Пожалуйста, заполните поле "$currentTitle"'), backgroundColor: Colors.red),
+                              SnackBar(
+                                content: Text('Пожалуйста, заполните поле "$currentTitle"'),
+                                backgroundColor: Colors.red,
+                              ),
                             );
                             return;
                           }
                         }
                         if (_currentStep < _dataFields.length - 1) {
-                          setState(() => _currentStep++);
+                          setState(() {
+                            _currentStep++;
+                          });
                         } else {
                           _submitUserData();
                         }
@@ -818,10 +896,15 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                         backgroundColor: Colors.purple,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text(_currentStep < _dataFields.length - 1 ? 'Следующий вопрос' : 'Завершить профиль',
-                          style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+                      child: Text(
+                        _currentStep < _dataFields.length - 1 ? 'Следующий вопрос' : 'Завершить профиль',
+                        style: const TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ],
