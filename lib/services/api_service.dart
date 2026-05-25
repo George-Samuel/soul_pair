@@ -8,21 +8,21 @@ import '../services/profile_service.dart';
 class ApiService {
   static const String baseUrl = 'https://soul-backend-5pcj.onrender.com';
 
-  // ===== АУТЕНТИФИКАЦИЯ =====
   static Future<bool> registerProfile(UserProfile profile) async {
     try {
       final url = Uri.parse('$baseUrl/register');
       print('🌐 Регистрация: $url');
 
-      // ВРЕМЕННЫЙ КОСТЫЛЬ: если пароль отсутствует, подставляем '123456'
-      var workingProfile = profile;
-      if (profile.password == null || profile.password!.isEmpty) {
-        print('⚠️ Пароль отсутствует, подставляем 123456');
-        workingProfile = profile.copyWith(password: '123456');
+      String finalPassword = profile.password ?? '';
+      if (finalPassword.isEmpty) {
+        // Если пароль не передан, регистрация невозможна
+        print('❌ Пароль не передан! Регистрация отменена.');
+        return false;
       }
+      print('🔑 Пароль из профиля: $finalPassword');
 
-      final data = workingProfile.toMap();
-      print('🔑 Пароль из профиля: "${workingProfile.password}" (длина ${workingProfile.password?.length ?? 0})');
+      Map<String, dynamic> data = profile.toMap();
+      data['password'] = finalPassword;
       print('📦 Отправляемые данные: $data');
 
       final response = await http.post(
@@ -43,6 +43,7 @@ class ApiService {
     }
   }
 
+  // ===== ЛОГИН =====
   static Future<bool> login(String userId, String password) async {
     try {
       final url = Uri.parse('$baseUrl/login');
@@ -71,7 +72,7 @@ class ApiService {
       print('🔵 1. Начинаем вход через Google');
       final GoogleSignIn _googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
-        serverClientId: '451981090613-avp94q90nifo0s6s0kn8k9h9qf094qqf.apps.googleusercontent.com', // вставьте сюда ваш Web Client ID
+        serverClientId: '69193608569-lljeikos3ttitkug6vg05dn43mshsivq.apps.googleusercontent.com', // замените на ваш Web Client ID
       );
       print('🔵 2. Объект GoogleSignIn создан');
 
@@ -103,6 +104,7 @@ class ApiService {
       return false;
     }
   }
+
   // ===== ПРОФИЛИ =====
   static Future<Map<String, dynamic>?> fetchProfile(String userId) async {
     try {
@@ -122,13 +124,21 @@ class ApiService {
   static Future<Map<String, dynamic>> fetchOtherProfiles(String myId) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/profiles?exclude=$myId'));
+      print('🔍 [fetchOtherProfiles] status: ${response.statusCode}, body length: ${response.body.length}');
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) return decoded;
+        print('🔍 [fetchOtherProfiles] decoded type: ${decoded.runtimeType}');
+        if (decoded is Map<String, dynamic>) {
+          print('🔍 [fetchOtherProfiles] найдено пользователей: ${decoded.length}');
+          return decoded;
+        } else {
+          print('❌ [fetchOtherProfiles] Ответ не является картой: $decoded');
+          return {};
+        }
       }
       return {};
     } catch (e) {
-      print(e);
+      print('❌ [fetchOtherProfiles] ошибка: $e');
       return {};
     }
   }

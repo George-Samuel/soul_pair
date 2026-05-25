@@ -1,14 +1,16 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
+import '../services/credential_storage.dart';
 import '../widgets/puzzle_progress_widget.dart';
 import 'puzzle_complete_screen.dart';
 
 class UserDataCollectionScreen extends StatefulWidget {
   final String userEmail;
-  final String userPassword;
+  final String userPassword; // не используется, но оставлен для совместимости
 
   const UserDataCollectionScreen({
     super.key,
@@ -24,6 +26,7 @@ class UserDataCollectionScreen extends StatefulWidget {
 class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   final Map<String, dynamic> _userData = {
     'email': '',
+    'password': '',
     'birth_date': '',
     'gender': '',
     'education': '',
@@ -54,6 +57,14 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
         (i) => (40 + i * 5).toString(),
   );
 
+  // ========== ГЕНЕРАТОР СЛУЧАЙНОГО ПАРОЛЯ ==========
+  String _generateRandomPassword(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    Random rnd = Random();
+    return String.fromCharCodes(Iterable.generate(length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+  }
+
+  // ========== РАСШИРЕННЫЕ СПИСКИ (ВАШИ) ==========
   static final List<String> _educationOptions = [
     'Нет образования',
     'Неполное среднее (9 классов)',
@@ -237,23 +248,12 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   @override
   void initState() {
     super.initState();
-
-    // 🔑 Берём пароль из временного хранилища (самый надёжный способ)
-    _userPassword = ProfileService.getTempPassword() ?? widget.userPassword;
-
-    if (_userPassword.isEmpty) {
-      // На случай, если пароль всё же не передался (например, при первом запуске)
-      _userPassword = '123456';
-      print('⚠️ [UserDataColl] Пароль не передан, используем 123456');
-    } else {
-      // Очищаем временное хранилище, чтобы не мешать
-      ProfileService.clearTempPassword();
-    }
-
-    print('🔑 [UserDataColl] Получен пароль: "$_userPassword" (длина ${_userPassword.length})');
+    _userPassword = widget.userPassword;
+    print('🔑 [UserDataColl] Получен пароль из widget: "$_userPassword" (длина ${_userPassword.length})');
     _userData['email'] = widget.userEmail;
+    _userData['password'] = ''; // временно, потом заменим
+  }
 
-      }
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -295,13 +295,19 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     return age;
   }
 
-  void _submitUserData() {
+  Future<void> _submitUserData() async {
     _userData['interests'] = _selectedInterests.join(', ');
     _userData['languages'] = _selectedLanguages.map((item) => '${item['language']} (${item['level']})').join(', ');
 
+    // Сохраняем пароль, который пришёл из EmailRegistrationScreen
+    final userPassword = widget.userPassword;
+    _userData['password'] = userPassword;
+    await CredentialStorage.saveCredentials(widget.userEmail, userPassword);
+    print('🔑 [UserDataColl] Сохранён пароль: $userPassword');
+
     final completeProfile = UserProfile(
       email: _userData['email'] as String,
-      password: _userPassword, // ПАРОЛЬ ОБЯЗАТЕЛЬНО ПЕРЕДАЁТСЯ
+      password: _userData['password'] as String,
       birthDate: _userData['birth_date'] as String?,
       gender: _userData['gender'] as String?,
       education: _userData['education'] as String?,
@@ -403,6 +409,7 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     });
   }
 
+  // ========== ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ (без изменений) ==========
   Widget _buildHeightDropdown() {
     final currentValue = _userData['height']?.toString() ?? '';
     return DropdownButtonFormField<String>(

@@ -440,6 +440,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+
   void _showAvatarPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -632,5 +633,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+
   }
+
 }

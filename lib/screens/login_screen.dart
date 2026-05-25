@@ -17,20 +17,21 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  void _login() async {
+  Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните все поля')),
+        const SnackBar(content: Text('Заполните email и пароль')),
       );
       return;
     }
+    final userId = email.replaceAll('@', '_at_').replaceAll('.', '_dot_');
     setState(() => _isLoading = true);
-    final success = await ApiService.login(email, password);
+    final success = await ApiService.login(userId, password);
     setState(() => _isLoading = false);
     if (success) {
-      final profileData = await ApiService.fetchProfile(email);
+      final profileData = await ApiService.fetchProfile(userId);
       if (profileData != null) {
         final profile = UserProfile.fromMap(profileData);
         await ProfileService.updateProfile(profile);
@@ -55,33 +56,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _googleSignIn() async {
-    print('🟢 Кнопка Google нажата');
     setState(() => _isLoading = true);
     final success = await ApiService.signInWithGoogle();
     setState(() => _isLoading = false);
-    print('🟢 Результат: $success');
     if (success && context.mounted) {
-      if (ProfileService.currentProfile != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PathSelectionScreen(
-              userProfile: ProfileService.currentProfile!,
-            ),
-          ),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const EmailRegistrationScreen(),
-          ),
-        );
-      }
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось войти через Google')),
-      );
+      // ... переход
     }
   }
 
@@ -113,9 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   ElevatedButton(
                     onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
+                    style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
                     child: const Text('Войти'),
                   ),
                   const SizedBox(height: 12),
@@ -134,9 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const EmailRegistrationScreen(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const EmailRegistrationScreen()),
                       );
                     },
                     child: const Text('Нет аккаунта? Зарегистрироваться'),

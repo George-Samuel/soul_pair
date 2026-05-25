@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
-import 'user_manager.dart';
-import 'storage_path.dart';
-import 'api_service.dart';
+import '../services/storage_path.dart';
+import '../services/user_manager.dart';
+import '../services/api_service.dart';
 
 class ProfileService {
   static UserProfile? _currentProfile;
@@ -14,7 +14,6 @@ class ProfileService {
 
   static void setTempPassword(String password) {
     _tempPassword = password;
-    print('🔑 [ProfileService] Пароль сохранён временно: "$password" (длина ${password.length})');
   }
 
   static String? getTempPassword() {
@@ -67,17 +66,6 @@ class ProfileService {
       final json = await file.readAsString();
       final Map<String, dynamic> map = jsonDecode(json) as Map<String, dynamic>;
       _currentProfile = UserProfile.fromMap(map);
-
-      final avatarPath = _currentProfile?.selectedAvatar;
-      if (avatarPath != null && avatarPath.isNotEmpty && !avatarPath.startsWith('assets/')) {
-        final exists = await File(avatarPath).exists();
-        if (!exists) {
-          print('⚠️ [ProfileService] Аватар не найден, сбрасываю: $avatarPath');
-          _currentProfile = _currentProfile!.copyWith(selectedAvatar: null);
-          await _saveToFile();
-        }
-      }
-
       print('✅ [ProfileService] профиль загружен, имя: ${_currentProfile?.name}');
       _notifyListeners();
     } catch (e) {
@@ -87,91 +75,36 @@ class ProfileService {
     }
   }
 
-  static Future<void> _deleteProfileFile() async {
-    try {
-      final file = await _getProfileFile();
-      if (await file.exists()) {
-        await file.delete();
-        print('🗑 [ProfileService] файл профиля удалён');
-      }
-    } catch (e) {
-      print('❌ [ProfileService] ошибка удаления: $e');
-    }
-  }
-
-  static Future<void> registerWithEmail(String email, [String? name]) async {
-    _currentProfile = UserProfile(
-      email: email,
-      name: name ?? _extractNameFromEmail(email),
-      completedAt: DateTime.now().toIso8601String(),
-      selectedAvatar: 'assets/images/Anna.jpg',
-    );
-    print('✅ Пользователь зарегистрирован: ${_currentProfile!.name}');
-    await _saveToFile();
-    await ApiService.registerProfile(_currentProfile!);
-    _notifyListeners();
-  }
-
-  static Future<void> updateAvatar(String avatarPath) async {
-    if (_currentProfile != null) {
-      _currentProfile = _currentProfile!.copyWith(
-        selectedAvatar: avatarPath,
-        completedAt: DateTime.now().toIso8601String(),
-      );
-      print('✅ Аватар обновлён: $avatarPath');
-      await _saveToFile();
-      await ApiService.registerProfile(_currentProfile!);
-      _notifyListeners();
-    }
-  }
-
-  static Future<void> updateProfile(UserProfile newProfile) async {
-    _currentProfile = newProfile.copyWith(
-      completedAt: DateTime.now().toIso8601String(),
-    );
-    print('✅ Профиль обновлён: ${newProfile.name}');
-    await _saveToFile();
-    await ApiService.registerProfile(_currentProfile!);
-    _notifyListeners();
-  }
-
-  static Future<void> updateName(String name) async {
-    if (_currentProfile != null) {
-      _currentProfile = _currentProfile!.copyWith(name: name);
-      await _saveToFile();
-      await ApiService.registerProfile(_currentProfile!);
-      _notifyListeners();
-    }
-  }
-
-  static Future<void> updateEmail(String email) async {
-    if (_currentProfile != null) {
-      _currentProfile = _currentProfile!.copyWith(email: email);
-      await _saveToFile();
-      await ApiService.registerProfile(_currentProfile!);
-      _notifyListeners();
-    }
-  }
-
-  static Future<void> updateAge(int? age) async {
-    if (_currentProfile != null) {
-      _currentProfile = _currentProfile!.copyWith(age: age);
-      await _saveToFile();
-      await ApiService.registerProfile(_currentProfile!);
-      _notifyListeners();
-    }
-  }
-
-  static Future<void> reset() async {
-    _currentProfile = null;
-    await _deleteProfileFile();
-    _notifyListeners();
-  }
-
   static Future<void> saveProfile(UserProfile profile) async {
     _currentProfile = profile;
     await _saveToFile();
     _notifyListeners();
+    print('✅ [ProfileService] профиль сохранён (saveProfile)');
+  }
+
+  static Future<void> updateProfile(UserProfile newProfile) async {
+    print('🔑 [ProfileService] Пароль перед сохранением: "${newProfile.password}" (длина ${newProfile.password?.length ?? 0})');
+    _currentProfile = newProfile.copyWith(completedAt: DateTime.now().toIso8601String());
+    await _saveToFile();
+    await ApiService.registerProfile(_currentProfile!);
+    _notifyListeners();
+  }
+
+  static Future<void> reset() async {
+    _currentProfile = null;
+    final file = await _getProfileFile();
+    if (await file.exists()) await file.delete();
+    _notifyListeners();
+  }
+
+  // ===== ДОБАВЛЕННЫЙ МЕТОД ДЛЯ ОБНОВЛЕНИЯ АВАТАРА =====
+  static Future<void> updateAvatar(String avatarPath) async {
+    if (_currentProfile != null) {
+      _currentProfile = _currentProfile!.copyWith(selectedAvatar: avatarPath);
+      await _saveToFile();
+      _notifyListeners();
+      print('✅ Аватар обновлён: $avatarPath');
+    }
   }
 
   static void addListener(VoidCallback listener) => _listeners.add(listener);
@@ -186,14 +119,4 @@ class ProfileService {
       }
     }
   }
-
-  static String _extractNameFromEmail(String email) {
-    final namePart = email.split('@').first;
-    final cleanName = namePart.replaceAll(RegExp(r'[0-9._+-]'), ' ');
-    if (cleanName.isNotEmpty) {
-      return cleanName[0].toUpperCase() + cleanName.substring(1);
-    }
-    return 'Пользователь';
-  }
-
 }

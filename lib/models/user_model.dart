@@ -2,6 +2,7 @@ import 'dart:math';
 
 class UserProfile {
   final String email;
+  final String? password; // 🆕 временное поле для регистрации
   final String? birthDate;
   final String? gender;
   final String? education;
@@ -26,7 +27,7 @@ class UserProfile {
   final String? country;
   final String? city;
   final bool isAdmin;
-  final String? password; // 🆕 временное поле для регистрации
+
   final Map<String, int>? values; // шкала ценностей (0-10)
 
   // 🆕 Поля для теста личности
@@ -66,9 +67,10 @@ class UserProfile {
         name = name ?? _extractNameFromEmail(email);
 
   Map<String, dynamic> toMap() {
+    print('🔑 [UserProfile.toMap] password = $password');
     return {
       'email': email,
-      if (password != null) 'password': password, // 🆕
+      'password': password, // 🆕
       'birth_date': birthDate,
       'gender': gender,
       'education': education,
@@ -95,8 +97,10 @@ class UserProfile {
       'values': values,
       'type_scores': typeScores,
       'dominant_type': dominantType,
+
     };
-  }
+
+   }
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     List<String> traits = [];
@@ -123,6 +127,7 @@ class UserProfile {
 
     return UserProfile(
       email: map['email'] as String? ?? '',
+      password: map['password'] as String?,
       birthDate: map['birth_date'] as String?,
       gender: map['gender'] as String?,
       education: map['education'] as String?,
@@ -184,6 +189,7 @@ class UserProfile {
   }) {
     return UserProfile(
       email: email ?? this.email,
+      password: password ?? this.password,
       birthDate: birthDate ?? this.birthDate,
       gender: gender ?? this.gender,
       education: education ?? this.education,

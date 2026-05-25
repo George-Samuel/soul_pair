@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'user_data_collection_screen.dart';
-import '../services/profile_service.dart';
 
 class EmailRegistrationScreen extends StatefulWidget {
   const EmailRegistrationScreen({super.key});
@@ -23,11 +22,6 @@ class _EmailRegistrationScreenState extends State<EmailRegistrationScreen> {
     if (!_isValid) return;
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-
-    // Сохраняем пароль в сервисе (надёжное место)
-    ProfileService.setTempPassword(password);
-    print('🔑 [EmailReg] Сохраняем пароль: "$password" (длина ${password.length})');
-
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -104,53 +98,19 @@ class _EmailRegistrationScreenState extends State<EmailRegistrationScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isValid ? () => _register(context) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Создать профиль',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ElevatedButton(
+              onPressed: _isValid ? () => _register(context) : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-            ),
-            Container(
-              margin: const EdgeInsets.only(top: 30),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info, color: Colors.blue),
-                      SizedBox(width: 10),
-                      Text(
-                        'Что дальше?',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'После регистрации вы заполните подробную анкету. Чем больше информации вы предоставите, тем точнее AI сможет подобрать вам идеального партнёра.',
-                    style: TextStyle(fontSize: 14, color: Colors.blue),
-                  ),
-                ],
+              child: const Text(
+                'Создать профиль',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
           ],
