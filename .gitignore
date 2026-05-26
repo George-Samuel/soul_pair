@@ -17,3 +17,4 @@ flutter_assets/
 .pub/
 packages/
 pubspec.lock
+android/app/google-services.json
