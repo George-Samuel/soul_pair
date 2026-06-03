@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/user_model.dart';
@@ -8,9 +10,10 @@ import '../services/ai_service.dart';
 import '../services/chat_history_service.dart';
 import '../services/share_service.dart';
 import '../services/report_service.dart';
-import '../services/text_moderation.dart'; // ← модерация
+import '../services/text_moderation.dart';
+import '../services/media_service.dart';
+import '../services/api_service.dart';
 import '../models/chat/message.dart';
-import 'dart:io';
 
 class ChatScreen extends StatefulWidget {
   final String characterName;
@@ -51,7 +54,6 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     sessionId = '${widget.characterName}_${widget.pathType}_${widget.userProfile.id}';
     sessionId = sessionId.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-    print('🟢 [CHAT] initState: sessionId=$sessionId, isTrainer=${widget.isTrainer}');
     _loadHistory();
     Future.delayed(const Duration(milliseconds: 500), () {
       if (_messages.isEmpty) {
@@ -60,24 +62,35 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadHistory() async {
-    print('🟢 [CHAT] _loadHistory: sessionId=$sessionId');
     final history = await ChatHistoryService.loadMessages(sessionId);
-    print('🟢 [CHAT] _loadHistory: загружено ${history.length} сообщений');
     for (var msg in history) {
       setState(() {
         _messages.add({
           'text': msg.text,
           'isUser': msg.isUser,
           'time': msg.time,
+          'image_url': msg.imageUrl,
+          'id': msg.id,
         });
       });
     }
   }
 
-  Future<void> _saveMessageToHistory(String text, bool isUser, DateTime time) async {
-    print('🟢 [CHAT] _saveMessageToHistory: sessionId=$sessionId, isTrainer=${widget.isTrainer}, text="$text"');
-    final message = Message(text: text, isUser: isUser, time: time);
+  Future<void> _saveMessageToHistory(String text, bool isUser, DateTime time, {String? imageUrl, int? id}) async {
+    final message = Message(
+      text: text,
+      isUser: isUser,
+      time: time,
+      imageUrl: imageUrl,
+      id: id,
+    );
     await ChatHistoryService.saveMessage(
       sessionId: sessionId,
       message: message,
@@ -92,20 +105,125 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _addAIMessage(String text) {
     final time = DateTime.now();
+    final fakeId = -DateTime.now().millisecondsSinceEpoch;
     setState(() {
       _messages.add({
         'text': text,
         'isUser': false,
         'time': time,
+        'id': fakeId,
       });
     });
-    _saveMessageToHistory(text, false, time);
+    _saveMessageToHistory(text, false, time, id: fakeId);
+  }
+
+  Future<void> _pickAndSendImage() async {
+    final imagePath = await MediaService.showImageSourceDialog(context);
+    if (imagePath == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final photoUrl = await ApiService.uploadPhoto(imagePath);
+      if (mounted) Navigator.pop(context);
+      if (photoUrl != null) {
+        final userTime = DateTime.now();
+        final fakeId = -DateTime.now().millisecondsSinceEpoch;
+        setState(() {
+          _messages.add({
+            'text': '',
+            'isUser': true,
+            'time': userTime,
+            'image_url': photoUrl,
+            'id': fakeId,
+          });
+        });
+        await _saveMessageToHistory('', true, userTime, imageUrl: photoUrl, id: fakeId);
+
+        setState(() {
+          _isWaitingForAI = true;
+        });
+
+        final parts = [
+          {'type': 'image_url', 'image_url': {'url': photoUrl}},
+          {'type': 'text', 'text': 'Опиши, что ты видишь на этом фото. Дай дружелюбный, поддерживающий комментарий.'},
+        ];
+        final aiResponse = await AIService.sendMessageWithParts(parts);
+        if (mounted) {
+          _addAIMessage(aiResponse);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ошибка загрузки фото'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ошибка загрузки фото'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isWaitingForAI = false;
+        });
+      }
+    }
+  }
+
+  void _showEmojiPickerSheet() {
+    final List<String> emojis = [
+      '😀', '😁', '😂', '😃', '😄', '😅', '😆', '😉', '😊', '😋',
+      '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '🙂', '🤗', '🤔',
+      '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😌',
+      '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧',
+      '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐',
+      '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦',
+      '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞',
+      '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿',
+      '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '💀', '👽', '🤖',
+      '💪', '🦾', '🖕', '✌️', '🤞', '🤟', '🤘', '🤙', '👌', '👍',
+      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+    ];
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        height: 300,
+        padding: const EdgeInsets.all(8),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 8,
+            childAspectRatio: 1,
+          ),
+          itemCount: emojis.length,
+          itemBuilder: (context, index) {
+            return InkWell(
+              onTap: () {
+                _textController.text += emojis[index];
+                Navigator.pop(context);
+                FocusScope.of(context).requestFocus();
+              },
+              child: Center(child: Text(emojis[index], style: const TextStyle(fontSize: 28))),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   void _showMessageOptions(Map<String, dynamic> message, int index) {
-    final messageText = message['text'] as String;
+    final messageText = (message['text'] ?? '').toString();
     final messageTime = message['time'] as DateTime;
     final isUser = message['isUser'] as bool? ?? false;
+    final messageId = message['id'] as int?;
     final senderId = isUser ? (_currentUser?.id ?? 'user') : widget.characterName;
 
     showModalBottomSheet(
@@ -141,6 +259,35 @@ class _ChatScreenState extends State<ChatScreen> {
                 _showReportDialog(messageText, senderId, messageTime);
               },
             ),
+            // === УДАЛЕНИЕ: для своих сообщений (без проверки id) ===
+            if (isUser)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Удалить'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  // Удаляем из UI
+                  setState(() {
+                    _messages.removeAt(index);
+                  });
+                  // Удаляем из локальной истории (если метод есть)
+                  try {
+                    await ChatHistoryService.deleteMessage(sessionId, messageId);
+                  } catch (e) {
+                    print('Ошибка удаления из истории: $e');
+                  }
+                  // Если сообщение реальное (положительный ID) – удаляем и через API
+                  if (messageId != null && messageId > 0) {
+                    await ApiService.deleteMessage(
+                      userId: _currentUser?.id ?? '',
+                      messageId: messageId,
+                    );
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Сообщение удалено'), duration: Duration(seconds: 1)),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -217,12 +364,9 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ========== ОТПРАВКА СООБЩЕНИЯ С МОДЕРАЦИЕЙ ==========
-  void _sendMessage() async {
-    final text = _textController.text.trim();
+  Future<void> _sendTextMessage(String text) async {
     if (text.isEmpty || _isWaitingForAI) return;
 
-    // Модерация текста
     if (TextModeration.containsProfanity(text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -234,17 +378,18 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final userTime = DateTime.now();
+    final fakeId = -DateTime.now().millisecondsSinceEpoch;
     setState(() {
       _messages.add({
         'text': text,
         'isUser': true,
         'time': userTime,
+        'id': fakeId,
       });
       _isWaitingForAI = true;
     });
     _textController.clear();
-
-    await _saveMessageToHistory(text, true, userTime);
+    await _saveMessageToHistory(text, true, userTime, id: fakeId);
 
     final history = _messages.map((msg) {
       return {
@@ -272,7 +417,34 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ (без изменений) ==========
+  bool _isImageUrl(String text) {
+    return text.startsWith('http') &&
+        (text.endsWith('.jpg') || text.endsWith('.jpeg') ||
+            text.endsWith('.png') || text.endsWith('.gif') ||
+            text.endsWith('.webp'));
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              child: Image.network(imageUrl),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
   String _safeSubstring(String? text, int maxLength) {
     if (text == null || text.isEmpty) return 'не указано';
     final length = text.length;
@@ -331,6 +503,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return 'Привет! Я твой AI-собеседник. Чем могу быть полезен?';
     }
   }
+
   String _getColorName(Color color) {
     if (color == Colors.purple) return 'фиолетовый';
     if (color == Colors.green) return 'зелёный';
@@ -541,7 +714,10 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                return _buildMessageBubble(message, index, characterColor);
+                return GestureDetector(
+                  onLongPress: () => _showMessageOptions(message, index),
+                  child: _buildMessageBubble(message, index, characterColor),
+                );
               },
             ),
           ),
@@ -553,6 +729,14 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  icon: Icon(Icons.photo_camera, color: characterColor),
+                  onPressed: _pickAndSendImage,
+                ),
+                IconButton(
+                  icon: Icon(Icons.emoji_emotions, color: characterColor),
+                  onPressed: _showEmojiPickerSheet,
+                ),
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -573,12 +757,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         hintStyle: TextStyle(color: ThemeColors.textHint(context)),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                        suffixIcon: IconButton(
-                          icon: Icon(Icons.emoji_emotions, color: characterColor),
-                          onPressed: () {},
-                        ),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
+                      onSubmitted: (_) => _sendTextMessage(_textController.text),
                     ),
                   ),
                 ),
@@ -594,7 +774,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                   child: FloatingActionButton(
-                    onPressed: _sendMessage,
+                    onPressed: () => _sendTextMessage(_textController.text),
                     backgroundColor: _isWaitingForAI ? Colors.grey : characterColor,
                     foregroundColor: Colors.white,
                     child: _isWaitingForAI
@@ -620,6 +800,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageBubble(Map<String, dynamic> message, int index, Color characterColor) {
     final isUser = (message['isUser'] as bool?) ?? false;
     final text = message['text'] as String;
+    final imageUrl = message['image_url'] as String?;
     final time = message['time'] as DateTime;
 
     Color bubbleColor;
@@ -636,101 +817,132 @@ class _ChatScreenState extends State<ChatScreen> {
       timeColor = Colors.grey[600]!.withOpacity(0.7);
     }
 
-    return GestureDetector(
-      onLongPress: () => _showMessageOptions(message, index),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-          children: [
-            if (!isUser)
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: characterColor.withOpacity(0.7), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: characterColor.withOpacity(0.2),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: widget.characterImage != null && !widget.isTrainer
-                    ? ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Image.asset(
-                    widget.characterImage!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.psychology, size: 20, color: characterColor);
-                    },
+    final bool isPhoto = imageUrl != null || _isImageUrl(text);
+    final String? displayUrl = imageUrl ?? (_isImageUrl(text) ? text : null);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isUser)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: characterColor.withOpacity(0.7), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: characterColor.withOpacity(0.2),
+                    blurRadius: 4,
                   ),
-                )
-                    : Icon(Icons.psychology, size: 20, color: characterColor),
+                ],
               ),
-            if (!isUser) const SizedBox(width: 8),
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isUser ? characterColor.withOpacity(0.3) : Colors.grey[300]!,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isUser ? characterColor : Colors.grey).withOpacity(0.1),
-                      blurRadius: 3,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+              child: widget.characterImage != null && !widget.isTrainer
+                  ? ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  widget.characterImage!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(Icons.psychology, size: 20, color: characterColor);
+                  },
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(text, style: TextStyle(fontSize: 16, color: textColor)),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
-                      style: TextStyle(fontSize: 11, color: timeColor),
+              )
+                  : Icon(Icons.psychology, size: 20, color: characterColor),
+            ),
+          if (!isUser) const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isUser ? characterColor.withOpacity(0.3) : Colors.grey[300]!,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isUser ? characterColor : Colors.grey).withOpacity(0.1),
+                    blurRadius: 3,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (displayUrl != null)
+                    GestureDetector(
+                      onTap: () => _showFullScreenImage(displayUrl),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          displayUrl,
+                          fit: BoxFit.cover,
+                          width: 200,
+                          height: 200,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              width: 200,
+                              height: 200,
+                              color: Colors.grey[200],
+                              child: const Center(child: CircularProgressIndicator()),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 200,
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.broken_image, size: 50),
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                  ],
+                  if (displayUrl == null && text.isNotEmpty)
+                    Text(text, style: TextStyle(fontSize: 16, color: textColor)),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+                    style: TextStyle(fontSize: 11, color: timeColor),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isUser) const SizedBox(width: 8),
+          if (isUser)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.blue.withOpacity(0.7), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.2),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: _currentUser?.selectedAvatar != null
+                    ? (_currentUser!.selectedAvatar!.startsWith('assets/')
+                    ? Image.asset(_currentUser!.selectedAvatar!, fit: BoxFit.cover)
+                    : Image.file(File(_currentUser!.selectedAvatar!), fit: BoxFit.cover))
+                    : const CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  child: Icon(Icons.person, size: 18, color: Colors.white),
                 ),
               ),
             ),
-            if (isUser) const SizedBox(width: 8),
-            if (isUser)
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.blue.withOpacity(0.7), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withOpacity(0.2),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: _currentUser?.selectedAvatar != null
-                      ? (_currentUser!.selectedAvatar!.startsWith('assets/')
-                      ? Image.asset(_currentUser!.selectedAvatar!, fit: BoxFit.cover)
-                      : Image.file(File(_currentUser!.selectedAvatar!), fit: BoxFit.cover))
-                      : const CircleAvatar(
-                    backgroundColor: Colors.blue,
-                    child: Icon(Icons.person, size: 18, color: Colors.white),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }

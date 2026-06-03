@@ -23,23 +23,25 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
 
   Future<void> _loadSessions() async {
     final sessions = await ChatHistoryService.getAllSessions();
-    setState(() {
-      _sessions = sessions;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _sessions = sessions;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _deleteSession(String sessionId) async {
     await ChatHistoryService.deleteSession(sessionId);
-    _loadSessions();
+    await _loadSessions();
   }
 
   Future<void> _clearAll() async {
     await ChatHistoryService.clearAll();
-    _loadSessions();
+    await _loadSessions();
   }
 
-  void _confirmDeleteSession(BuildContext context, String sessionId) {
+  void _confirmDeleteSession(String sessionId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -59,7 +61,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     );
   }
 
-  void _confirmClearAll(BuildContext context) {
+  void _confirmClearAll() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -81,13 +83,21 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentProfile = ProfileService.currentProfile;
+    if (currentProfile == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('История чатов')),
+        body: const Center(child: Text('Пользователь не авторизован')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('История чатов'),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
-            onPressed: () => _confirmClearAll(context),
+            onPressed: _confirmClearAll,
           ),
         ],
       ),
@@ -115,15 +125,15 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
             subtitle: Text(session.lastMessage),
             trailing: IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _confirmDeleteSession(context, session.id),
+              onPressed: () => _confirmDeleteSession(session.id),
             ),
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatScreen(
                     characterName: session.characterName,
-                    userProfile: ProfileService.currentProfile!,
+                    userProfile: currentProfile,
                     pathType: session.pathType,
                     isTrainer: session.isTrainer,
                     characterImage: session.characterImage,
@@ -132,6 +142,8 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                   ),
                 ),
               );
+              // Обновляем список после возврата из чата (например, изменилось последнее сообщение)
+              await _loadSessions();
             },
           );
         },

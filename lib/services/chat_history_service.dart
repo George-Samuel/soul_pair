@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import '../models/chat/chat_session.dart';
 import '../models/chat/message.dart';
-import 'user_manager.dart';
+import '../services/profile_service.dart';
 import 'storage_path.dart'; // твой канал
 
 class ChatHistoryService {
   // --- Базовый путь к папке пользователя (асинхронный) ---
   static Future<String> get _baseDir async {
     final baseDir = await StoragePath.getFilesDir();
-    final userId = UserManager.currentUserId ?? 'default';
+    final userId = ProfileService.currentProfile?.id ?? 'default';
     final path = '$baseDir/user_$userId';
     final dir = Directory(path);
     await dir.create(recursive: true);
@@ -82,7 +82,7 @@ class ChatHistoryService {
       id: sessionId,
       characterName: characterName,
       characterImage: characterImage,
-      lastMessage: message.text,
+      lastMessage: message.text.isEmpty && message.imageUrl != null ? '[Фото]' : message.text,
       lastUpdated: message.time,
       pathType: pathType,
       isTrainer: isTrainer,
@@ -113,5 +113,12 @@ class ChatHistoryService {
     }
     final sessionsFile = await _getSessionsFile();
     if (await sessionsFile.exists()) await sessionsFile.delete();
+  }
+  static Future<void> deleteMessage(String sessionId, int? messageId) async {
+    if (messageId == null) return;
+    final messages = await loadMessages(sessionId);
+    messages.removeWhere((msg) => msg.id == messageId);
+    final msgFile = await _getMessagesFile(sessionId);
+    await msgFile.writeAsString(jsonEncode(messages.map((m) => m.toJson()).toList()));
   }
 }

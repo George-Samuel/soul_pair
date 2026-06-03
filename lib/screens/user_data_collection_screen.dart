@@ -10,12 +10,16 @@ import 'puzzle_complete_screen.dart';
 
 class UserDataCollectionScreen extends StatefulWidget {
   final String userEmail;
-  final String userPassword; // не используется, но оставлен для совместимости
+  final String userPassword;
+  final String? googleName;
+  final String? googleAvatar;
 
   const UserDataCollectionScreen({
     super.key,
     required this.userEmail,
     required this.userPassword,
+    this.googleName,
+    this.googleAvatar,
   });
 
   @override
@@ -41,6 +45,8 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     'attitude_to_animals': '',
     'smoking': '',
     'alcohol': '',
+    'name': '',
+    'selected_avatar': '',
   };
 
   int _currentStep = 0;
@@ -61,10 +67,11 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   String _generateRandomPassword(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     Random rnd = Random();
-    return String.fromCharCodes(Iterable.generate(length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+    return String.fromCharCodes(Iterable.generate(
+        length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
   }
 
-  // ========== РАСШИРЕННЫЕ СПИСКИ (ВАШИ) ==========
+  // ========== РАСШИРЕННЫЕ СПИСКИ ==========
   static final List<String> _educationOptions = [
     'Нет образования',
     'Неполное среднее (9 классов)',
@@ -227,19 +234,69 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
 
   final List<Map<String, dynamic>> _dataFields = [
     {'title': 'Дата рождения', 'key': 'birth_date', 'type': 'date_picker'},
-    {'title': 'Ваш пол', 'key': 'gender', 'type': 'dropdown', 'options': ['Мужской', 'Женский']},
-    {'title': 'Образование', 'key': 'education', 'type': 'dropdown', 'options': _educationOptions},
-    {'title': 'Профессия', 'key': 'profession', 'type': 'dropdown', 'options': _professionOptions},
-    {'title': 'Интересы и хобби', 'key': 'interests', 'type': 'multi_select', 'items': _interestsList},
+    {
+      'title': 'Ваш пол',
+      'key': 'gender',
+      'type': 'dropdown',
+      'options': ['Мужской', 'Женский']
+    },
+    {
+      'title': 'Образование',
+      'key': 'education',
+      'type': 'dropdown',
+      'options': _educationOptions
+    },
+    {
+      'title': 'Профессия',
+      'key': 'profession',
+      'type': 'dropdown',
+      'options': _professionOptions
+    },
+    {
+      'title': 'Интересы и хобби',
+      'key': 'interests',
+      'type': 'multi_select',
+      'items': _interestsList
+    },
     {'title': 'Языки', 'key': 'languages', 'type': 'languages_select'},
     {'title': 'Рост', 'key': 'height', 'type': 'height_dropdown'},
     {'title': 'Вес', 'key': 'weight', 'type': 'weight_dropdown'},
-    {'title': 'Есть ли у вас дети?', 'key': 'has_children', 'type': 'dropdown', 'options': _hasChildrenOptions},
-    {'title': 'Хотите ли детей в будущем?', 'key': 'wants_children', 'type': 'dropdown', 'options': _wantsChildrenOptions},
-    {'title': 'Религия', 'key': 'religion', 'type': 'dropdown', 'options': _religionOptions},
-    {'title': 'Отношение к животным', 'key': 'attitude_to_animals', 'type': 'dropdown', 'options': _attitudeToAnimalsOptions},
-    {'title': 'Отношение к курению', 'key': 'smoking', 'type': 'dropdown', 'options': _smokingOptions},
-    {'title': 'Отношение к алкоголю', 'key': 'alcohol', 'type': 'dropdown', 'options': _alcoholOptions},
+    {
+      'title': 'Есть ли у вас дети?',
+      'key': 'has_children',
+      'type': 'dropdown',
+      'options': _hasChildrenOptions
+    },
+    {
+      'title': 'Хотите ли детей в будущем?',
+      'key': 'wants_children',
+      'type': 'dropdown',
+      'options': _wantsChildrenOptions
+    },
+    {
+      'title': 'Религия',
+      'key': 'religion',
+      'type': 'dropdown',
+      'options': _religionOptions
+    },
+    {
+      'title': 'Отношение к животным',
+      'key': 'attitude_to_animals',
+      'type': 'dropdown',
+      'options': _attitudeToAnimalsOptions
+    },
+    {
+      'title': 'Отношение к курению',
+      'key': 'smoking',
+      'type': 'dropdown',
+      'options': _smokingOptions
+    },
+    {
+      'title': 'Отношение к алкоголю',
+      'key': 'alcohol',
+      'type': 'dropdown',
+      'options': _alcoholOptions
+    },
   ];
 
   List<String> _selectedInterests = [];
@@ -249,9 +306,13 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   void initState() {
     super.initState();
     _userPassword = widget.userPassword;
-    print('🔑 [UserDataColl] Получен пароль из widget: "$_userPassword" (длина ${_userPassword.length})');
     _userData['email'] = widget.userEmail;
-    _userData['password'] = ''; // временно, потом заменим
+    if (widget.googleName != null && widget.googleName!.isNotEmpty) {
+      _userData['name'] = widget.googleName;
+    }
+    if (widget.googleAvatar != null && widget.googleAvatar!.isNotEmpty) {
+      _userData['selected_avatar'] = widget.googleAvatar;
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -280,7 +341,8 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       setState(() {
         _selectedDate = picked;
         _calculatedAge = _calculateAge(picked);
-        _userData['birth_date'] = '${picked.day}.${picked.month}.${picked.year}';
+        _userData['birth_date'] =
+        '${picked.day}.${picked.month}.${picked.year}';
       });
     }
   }
@@ -289,7 +351,8 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     final now = DateTime.now();
     int age = now.year - birthDate.year;
     final monthDifference = now.month - birthDate.month;
-    if (monthDifference < 0 || (monthDifference == 0 && now.day < birthDate.day)) {
+    if (monthDifference < 0 ||
+        (monthDifference == 0 && now.day < birthDate.day)) {
       age--;
     }
     return age;
@@ -297,13 +360,13 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
 
   Future<void> _submitUserData() async {
     _userData['interests'] = _selectedInterests.join(', ');
-    _userData['languages'] = _selectedLanguages.map((item) => '${item['language']} (${item['level']})').join(', ');
+    _userData['languages'] = _selectedLanguages.map((
+        item) => '${item['language']} (${item['level']})').join(', ');
 
-    // Сохраняем пароль, который пришёл из EmailRegistrationScreen
-    final userPassword = widget.userPassword;
-    _userData['password'] = userPassword;
-    await CredentialStorage.saveCredentials(widget.userEmail, userPassword);
-    print('🔑 [UserDataColl] Сохранён пароль: $userPassword');
+    final randomPassword = _generateRandomPassword(10);
+    _userData['password'] = randomPassword;
+    await CredentialStorage.saveCredentials(widget.userEmail, randomPassword);
+    print('🔑 [UserDataColl] Сгенерирован пароль: $randomPassword');
 
     final completeProfile = UserProfile(
       email: _userData['email'] as String,
@@ -322,6 +385,8 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       attitudeToAnimals: _userData['attitude_to_animals'] as String?,
       smoking: _userData['smoking'] as String?,
       alcohol: _userData['alcohol'] as String?,
+      name: _userData['name'] as String?,
+      selectedAvatar: _userData['selected_avatar'] as String?,
     );
 
     ProfileService.updateProfile(completeProfile);
@@ -340,51 +405,53 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.white.withOpacity(0.95),
-      builder: (context) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          systemNavigationBarColor: Colors.white,
-          systemNavigationBarDividerColor: Colors.transparent,
-        ),
-        child: AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              const Icon(Icons.person_search, color: Colors.purple),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Создаём ваш профиль',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
+      builder: (context) =>
+          AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              systemNavigationBarColor: Colors.white,
+              systemNavigationBarDividerColor: Colors.transparent,
+            ),
+            child: AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
-          ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 50,
-                width: 50,
-                child: CircularProgressIndicator(
-                  strokeWidth: 4,
-                  color: Colors.purple,
-                ),
+              title: Row(
+                children: [
+                  const Icon(Icons.person_search, color: Colors.purple),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Создаём ваш профиль',
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 20),
-              Text(
-                'Анализируем данные для подбора идеальной пары...',
-                style: TextStyle(fontSize: 14),
-                textAlign: TextAlign.center,
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 50,
+                    width: 50,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 4,
+                      color: Colors.purple,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'Анализируем данные для подбора идеальной пары...',
+                    style: TextStyle(fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
 
     Future.delayed(const Duration(seconds: 2), () {
@@ -400,16 +467,17 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => PuzzleCompleteScreen(
-            userProfile: completeProfile,
-            puzzleImageAsset: 'assets/images/puzzle/main_puzzle.jpg',
-          ),
+          builder: (context) =>
+              PuzzleCompleteScreen(
+                userProfile: completeProfile,
+                puzzleImageAsset: 'assets/images/puzzle/main_puzzle.jpg',
+              ),
         ),
       );
     });
   }
 
-  // ========== ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ (без изменений) ==========
+  // Вспомогательные виджеты (без изменений)
   Widget _buildHeightDropdown() {
     final currentValue = _userData['height']?.toString() ?? '';
     return DropdownButtonFormField<String>(
@@ -417,21 +485,35 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       isExpanded: true,
       hint: Text(
         'Выберите рост',
-        style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+        style: TextStyle(color: Theme
+            .of(context)
+            .textTheme
+            .bodySmall
+            ?.color),
       ),
       decoration: InputDecoration(
         hintText: 'Выберите рост (см)',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
-        fillColor: Theme.of(context).cardColor,
+        fillColor: Theme
+            .of(context)
+            .cardColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         isDense: true,
       ),
-      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+      style: TextStyle(color: Theme
+          .of(context)
+          .textTheme
+          .bodyLarge
+          ?.color),
       items: _heightOptions.map((String value) {
         return DropdownMenuItem<String>(
           value: value,
-          child: Text('$value см', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+          child: Text('$value см', style: TextStyle(color: Theme
+              .of(context)
+              .textTheme
+              .bodyLarge
+              ?.color)),
         );
       }).toList(),
       onChanged: (value) {
@@ -447,21 +529,35 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       isExpanded: true,
       hint: Text(
         'Выберите вес',
-        style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+        style: TextStyle(color: Theme
+            .of(context)
+            .textTheme
+            .bodySmall
+            ?.color),
       ),
       decoration: InputDecoration(
         hintText: 'Выберите вес (кг)',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
-        fillColor: Theme.of(context).cardColor,
+        fillColor: Theme
+            .of(context)
+            .cardColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         isDense: true,
       ),
-      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+      style: TextStyle(color: Theme
+          .of(context)
+          .textTheme
+          .bodyLarge
+          ?.color),
       items: _weightOptions.map((String value) {
         return DropdownMenuItem<String>(
           value: value,
-          child: Text('$value кг', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+          child: Text('$value кг', style: TextStyle(color: Theme
+              .of(context)
+              .textTheme
+              .bodyLarge
+              ?.color)),
         );
       }).toList(),
       onChanged: (value) {
@@ -477,20 +573,34 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       isExpanded: true,
       hint: Text(
         'Выберите вариант',
-        style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+        style: TextStyle(color: Theme
+            .of(context)
+            .textTheme
+            .bodySmall
+            ?.color),
       ),
       decoration: InputDecoration(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
-        fillColor: Theme.of(context).cardColor,
+        fillColor: Theme
+            .of(context)
+            .cardColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         isDense: true,
       ),
-      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+      style: TextStyle(color: Theme
+          .of(context)
+          .textTheme
+          .bodyLarge
+          ?.color),
       items: options.map((String value) {
         return DropdownMenuItem<String>(
           value: value,
-          child: Text(value, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+          child: Text(value, style: TextStyle(color: Theme
+              .of(context)
+              .textTheme
+              .bodyLarge
+              ?.color)),
         );
       }).toList(),
       onChanged: (value) {
@@ -503,47 +613,49 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     List<String> tempSelected = List.from(_selectedInterests);
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text('Выберите интересы и хобби'),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: ListView(
-                children: _interestsList.map((interest) {
-                  return CheckboxListTile(
-                    title: Text(interest),
-                    value: tempSelected.contains(interest),
-                    onChanged: (value) {
-                      setStateDialog(() {
-                        if (value == true) {
-                          tempSelected.add(interest);
-                        } else {
-                          tempSelected.remove(interest);
-                        }
+      builder: (context) =>
+          StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return AlertDialog(
+                title: const Text('Выберите интересы и хобби'),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 400,
+                  child: ListView(
+                    children: _interestsList.map((interest) {
+                      return CheckboxListTile(
+                        title: Text(interest),
+                        value: tempSelected.contains(interest),
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            if (value == true) {
+                              tempSelected.add(interest);
+                            } else {
+                              tempSelected.remove(interest);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context),
+                      child: const Text('Отмена')),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedInterests = tempSelected;
+                        _userData['interests'] = _selectedInterests.join(', ');
                       });
+                      Navigator.pop(context);
                     },
-                  );
-                }).toList(),
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedInterests = tempSelected;
-                    _userData['interests'] = _selectedInterests.join(', ');
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Сохранить'),
-              ),
-            ],
-          );
-        },
-      ),
+                    child: const Text('Сохранить'),
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
 
@@ -552,43 +664,56 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
     String? selectedLevel;
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Добавить язык'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: selectedLanguage,
-              hint: const Text('Выберите язык'),
-              items: _languagesList.map((lang) => DropdownMenuItem(value: lang, child: Text(lang))).toList(),
-              onChanged: (value) => selectedLanguage = value,
-              decoration: const InputDecoration(labelText: 'Язык', border: OutlineInputBorder()),
+      builder: (context) =>
+          AlertDialog(
+            title: const Text('Добавить язык'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedLanguage,
+                  hint: const Text('Выберите язык'),
+                  items: _languagesList
+                      .map((lang) =>
+                      DropdownMenuItem(value: lang, child: Text(lang)))
+                      .toList(),
+                  onChanged: (value) => selectedLanguage = value,
+                  decoration: const InputDecoration(
+                      labelText: 'Язык', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedLevel,
+                  hint: const Text('Уровень владения'),
+                  items: _languageLevels
+                      .map((level) =>
+                      DropdownMenuItem(value: level, child: Text(level)))
+                      .toList(),
+                  onChanged: (value) => selectedLevel = value,
+                  decoration: const InputDecoration(
+                      labelText: 'Уровень', border: OutlineInputBorder()),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: selectedLevel,
-              hint: const Text('Уровень владения'),
-              items: _languageLevels.map((level) => DropdownMenuItem(value: level, child: Text(level))).toList(),
-              onChanged: (value) => selectedLevel = value,
-              decoration: const InputDecoration(labelText: 'Уровень', border: OutlineInputBorder()),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-          ElevatedButton(
-            onPressed: () {
-              if (selectedLanguage != null && selectedLevel != null) {
-                setState(() {
-                  _selectedLanguages.add({'language': selectedLanguage!, 'level': selectedLevel!});
-                });
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Добавить'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context),
+                  child: const Text('Отмена')),
+              ElevatedButton(
+                onPressed: () {
+                  if (selectedLanguage != null && selectedLevel != null) {
+                    setState(() {
+                      _selectedLanguages.add({
+                        'language': selectedLanguage!,
+                        'level': selectedLevel!
+                      });
+                    });
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Добавить'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -600,10 +725,12 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            ..._selectedLanguages.map((item) => Chip(
-              label: Text('${item['language']} (${item['level']})'),
-              onDeleted: () => setState(() => _selectedLanguages.remove(item)),
-            )),
+            ..._selectedLanguages.map((item) =>
+                Chip(
+                  label: Text('${item['language']} (${item['level']})'),
+                  onDeleted: () =>
+                      setState(() => _selectedLanguages.remove(item)),
+                )),
             ActionChip(
               label: const Text('+ Добавить язык'),
               onPressed: _showLanguageDialog,
@@ -615,7 +742,11 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Text('Добавьте языки, чтобы другие знали ваши возможности',
-                style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+                style: TextStyle(color: Theme
+                    .of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.color)),
           ),
       ],
     );
@@ -629,10 +760,12 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            ..._selectedInterests.map((interest) => Chip(
-              label: Text(interest),
-              onDeleted: () => setState(() => _selectedInterests.remove(interest)),
-            )),
+            ..._selectedInterests.map((interest) =>
+                Chip(
+                  label: Text(interest),
+                  onDeleted: () =>
+                      setState(() => _selectedInterests.remove(interest)),
+                )),
             ActionChip(
               label: const Text('+ Выбрать интересы'),
               onPressed: _showInterestsDialog,
@@ -643,8 +776,13 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
         if (_selectedInterests.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: Text('Выберите свои увлечения, чтобы алгоритмы лучше подобрали пару',
-                style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+            child: Text(
+                'Выберите свои увлечения, чтобы алгоритмы лучше подобрали пару',
+                style: TextStyle(color: Theme
+                    .of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.color)),
           ),
       ],
     );
@@ -668,42 +806,66 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
             constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).dividerColor),
+              border: Border.all(color: Theme
+                  .of(context)
+                  .dividerColor),
               borderRadius: BorderRadius.circular(12),
-              color: Theme.of(context).cardColor,
+              color: Theme
+                  .of(context)
+                  .cardColor,
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_month, color: Colors.purple, size: 22),
+                const Icon(
+                    Icons.calendar_month, color: Colors.purple, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _selectedDate != null
-                        ? '${_selectedDate!.day.toString().padLeft(2, '0')}.${_selectedDate!.month.toString().padLeft(2, '0')}.${_selectedDate!.year}'
+                        ? '${_selectedDate!.day.toString().padLeft(
+                        2, '0')}.${_selectedDate!.month.toString().padLeft(
+                        2, '0')}.${_selectedDate!.year}'
                         : (field['hint'] as String? ?? 'Нажмите чтобы выбрать'),
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: _selectedDate != null ? FontWeight.w500 : FontWeight.normal,
+                      fontWeight: _selectedDate != null
+                          ? FontWeight.w500
+                          : FontWeight.normal,
                       color: _selectedDate != null
-                          ? Theme.of(context).textTheme.bodyLarge?.color
-                          : Theme.of(context).textTheme.bodySmall?.color,
+                          ? Theme
+                          .of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.color
+                          : Theme
+                          .of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color,
                     ),
                   ),
                 ),
                 if (_selectedDate != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.purple.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text('$_calculatedAge лет',
-                        style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
+                        style: const TextStyle(color: Colors.purple,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
                   ),
                 const SizedBox(width: 4),
                 Icon(
                   Icons.arrow_drop_down,
-                  color: Theme.of(context).iconTheme.color?.withOpacity(0.7),
+                  color: Theme
+                      .of(context)
+                      .iconTheme
+                      .color
+                      ?.withOpacity(0.7),
                   size: 24,
                 ),
               ],
@@ -720,9 +882,11 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
   }
 
   Map<String, dynamic> _getCurrentField() {
-    if (_dataFields.isEmpty) return {'title': 'Ошибка', 'key': 'error', 'type': 'text'};
+    if (_dataFields.isEmpty)
+      return {'title': 'Ошибка', 'key': 'error', 'type': 'text'};
     if (_currentStep < 0) _currentStep = 0;
-    if (_currentStep >= _dataFields.length) _currentStep = _dataFields.length - 1;
+    if (_currentStep >= _dataFields.length)
+      _currentStep = _dataFields.length - 1;
     return _dataFields[_currentStep];
   }
 
@@ -737,7 +901,8 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Ошибка')),
         body: const Center(
-          child: Text('Ошибка загрузки формы. Пожалуйста, перезагрузите приложение.'),
+          child: Text(
+              'Ошибка загрузки формы. Пожалуйста, перезагрузите приложение.'),
         ),
       );
     }
@@ -751,58 +916,66 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
         ),
       ),
       resizeToAvoidBottomInset: false,
-      body: Column(
-        children: [
-          PuzzleProgressWidget(
-            currentStep: _currentStep,
-            totalSteps: _dataFields.length,
-            imageAsset: 'assets/images/puzzle/main_puzzle.jpg',
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Column(
-              children: [
-                LinearProgressIndicator(
-                  value: (_currentStep + 1) / _dataFields.length,
-                  backgroundColor: Theme.of(context).dividerColor,
-                  color: Colors.purple,
-                  borderRadius: BorderRadius.circular(10),
-                  minHeight: 8,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${_currentStep + 1} из ${_dataFields.length}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).textTheme.bodySmall?.color,
-                  ),
-                ),
-              ],
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PuzzleProgressWidget(
+              currentStep: _currentStep,
+              totalSteps: _dataFields.length,
+              imageAsset: 'assets/images/puzzle/main_puzzle.jpg',
             ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10).copyWith(bottom: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: (_currentStep + 1) / _dataFields.length,
+                    backgroundColor: Theme
+                        .of(context)
+                        .dividerColor,
+                    color: Colors.purple,
+                    borderRadius: BorderRadius.circular(10),
+                    minHeight: 8,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_currentStep + 1} из ${_dataFields.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme
+                          .of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)
+                  .copyWith(bottom: 20),
               child: Column(
                 children: [
                   Text(
                     currentTitle,
                     style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
+                        fontSize: 22, fontWeight: FontWeight.bold, height: 1.2),
                     textAlign: TextAlign.center,
                   ),
-                  if (currentType != 'date_picker' && currentType != 'multi_select' && currentType != 'languages_select')
+                  if (currentType != 'date_picker' &&
+                      currentType != 'multi_select' &&
+                      currentType != 'languages_select')
                     ...[
                       const SizedBox(height: 8),
                       Text(
                         currentField['hint'] as String? ?? 'Выберите вариант',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Theme
+                            .of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -811,114 +984,118 @@ class _UserDataCollectionScreenState extends State<UserDataCollectionScreen> {
                 ],
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              border: Border(
-                top: BorderSide(color: Theme.of(context).dividerColor),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: Theme
+                    .of(context)
+                    .cardColor,
+                border: Border(
+                  top: BorderSide(color: Theme
+                      .of(context)
+                      .dividerColor),
+                ),
               ),
-            ),
-            child: SafeArea(
-              top: false,
-              bottom: true,
-              child: Row(
-                children: [
-                  if (_currentStep > 0)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _currentStep--;
-                            if (_currentStep < 0) _currentStep = 0;
-                          });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: Colors.purple),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+              child: SafeArea(
+                top: false,
+                bottom: true,
+                child: Row(
+                  children: [
+                    if (_currentStep > 0)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _currentStep--;
+                              if (_currentStep < 0) _currentStep = 0;
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: Colors.purple),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
+                          child: const Text('Назад', style: TextStyle(
+                              fontSize: 16), textAlign: TextAlign.center),
                         ),
-                        child: const Text(
-                          'Назад',
-                          style: TextStyle(fontSize: 16),
+                      ),
+                    if (_currentStep > 0) const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Валидация (оставьте вашу логику)
+                          if (currentKey == 'birth_date' && _selectedDate ==
+                              null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text(
+                                  'Пожалуйста, выберите дату рождения'),
+                                  backgroundColor: Colors.red),
+                            );
+                            return;
+                          }
+                          if (currentKey == 'interests' && _selectedInterests
+                              .isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text(
+                                  'Пожалуйста, выберите хотя бы один интерес'),
+                                  backgroundColor: Colors.red),
+                            );
+                            return;
+                          }
+                          if (currentKey == 'languages' && _selectedLanguages
+                              .isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Добавьте хотя бы один язык'),
+                                  backgroundColor: Colors.red),
+                            );
+                            return;
+                          }
+                          if (currentType == 'dropdown') {
+                            final currentValue = _userData[currentKey];
+                            if (currentValue == null || currentValue
+                                .toString()
+                                .trim()
+                                .isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(
+                                    'Пожалуйста, заполните поле "$currentTitle"'),
+                                    backgroundColor: Colors.red),
+                              );
+                              return;
+                            }
+                          }
+                          if (_currentStep < _dataFields.length - 1) {
+                            setState(() {
+                              _currentStep++;
+                            });
+                          } else {
+                            _submitUserData();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          _currentStep < _dataFields.length - 1
+                              ? 'Следующий вопрос'
+                              : 'Завершить профиль',
+                          style: const TextStyle(fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     ),
-                  if (_currentStep > 0) const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (currentKey == 'birth_date' && _selectedDate == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Пожалуйста, выберите дату рождения'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        if (currentKey == 'interests' && _selectedInterests.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Пожалуйста, выберите хотя бы один интерес'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        if (currentKey == 'languages' && _selectedLanguages.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Добавьте хотя бы один язык'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        if (currentType == 'dropdown') {
-                          final currentValue = _userData[currentKey];
-                          if (currentValue == null || currentValue.toString().trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Пожалуйста, заполните поле "$currentTitle"'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                        }
-                        if (_currentStep < _dataFields.length - 1) {
-                          setState(() {
-                            _currentStep++;
-                          });
-                        } else {
-                          _submitUserData();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        _currentStep < _dataFields.length - 1 ? 'Следующий вопрос' : 'Завершить профиль',
-                        style: const TextStyle(fontSize: 16),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

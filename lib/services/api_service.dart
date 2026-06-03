@@ -15,7 +15,6 @@ class ApiService {
 
       String finalPassword = profile.password ?? '';
       if (finalPassword.isEmpty) {
-        // Если пароль не передан, регистрация невозможна
         print('❌ Пароль не передан! Регистрация отменена.');
         return false;
       }
@@ -34,7 +33,8 @@ class ApiService {
         print('✅ Регистрация успешна');
         return true;
       } else {
-        print('❌ Ошибка регистрации: ${response.statusCode} - ${response.body}');
+        print(
+            '❌ Ошибка регистрации: ${response.statusCode} - ${response.body}');
         return false;
       }
     } catch (e) {
@@ -43,7 +43,6 @@ class ApiService {
     }
   }
 
-  // ===== ЛОГИН =====
   static Future<bool> login(String userId, String password) async {
     try {
       final url = Uri.parse('$baseUrl/login');
@@ -66,21 +65,22 @@ class ApiService {
     }
   }
 
-  // ===== ВХОД ЧЕРЕЗ GOOGLE =====
-  static Future<bool> signInWithGoogle() async {
+  static Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
       print('🔵 1. Начинаем вход через Google');
       final GoogleSignIn _googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
-        serverClientId: '69193608569-lljeikos3ttitkug6vg05dn43mshsivq.apps.googleusercontent.com', // замените на ваш Web Client ID
+        serverClientId: '69193608569-lljeikos3ttitkug6vg05dn43mshsivq.apps.googleusercontent.com',
       );
-      print('🔵 2. Объект GoogleSignIn создан');
+      await _googleSignIn.signOut();
+      print('🔵 2. Выполнен выход из предыдущей сессии Google');
+      print('🔵 3. Объект GoogleSignIn создан');
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return false;
+      if (googleUser == null) return null;
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
-      if (idToken == null) return false;
+      if (idToken == null) return null;
 
       print('🔵 6. Отправляем idToken на сервер');
       final response = await http.post(
@@ -91,21 +91,23 @@ class ApiService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
         final String userId = data['user_id'] as String;
-        final profileMap = await fetchProfile(userId);
-        if (profileMap != null) {
-          final profile = UserProfile.fromMap(profileMap);
-          await ProfileService.updateProfile(profile);
-          return true;
-        }
+        final String email = userId.replaceAll('_at_', '@').replaceAll('_dot_', '.');
+        return {
+          'user_id': userId,
+          'email': email,
+          'name': googleUser.displayName ?? '',
+          'picture': googleUser.photoUrl ?? '',
+        };
+      } else {
+        print('❌ Ошибка верификации Google: ${response.statusCode} - ${response.body}');
+        return null;
       }
-      return false;
     } catch (e) {
       print('❌ Ошибка входа через Google: $e');
-      return false;
+      return null;
     }
   }
 
-  // ===== ПРОФИЛИ =====
   static Future<Map<String, dynamic>?> fetchProfile(String userId) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/profile/$userId'));
@@ -157,13 +159,22 @@ class ApiService {
     }
   }
 
-  // ===== СООБЩЕНИЯ =====
-  static Future<bool> sendMessage({required String fromId, required String toId, required String text}) async {
+  static Future<bool> sendMessage({
+    required String fromId,
+    required String toId,
+    String text = '',
+    String? imageUrl,
+  }) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/send_message'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'from': fromId, 'to': toId, 'text': text}),
+        body: jsonEncode({
+          'from': fromId,
+          'to': toId,
+          'text': text,
+          if (imageUrl != null) 'image_url': imageUrl,
+        }),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -172,14 +183,21 @@ class ApiService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getDialog({required String user1, required String user2, int lastId = 0}) async {
+  static Future<List<Map<String, dynamic>>> getDialog({
+    required String user1,
+    required String user2,
+    int lastId = 0,
+  }) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/get_dialog?user1=$user1&user2=$user2&last_id=$lastId'));
+      final response = await http.get(Uri.parse(
+          '$baseUrl/get_dialog?user1=$user1&user2=$user2&last_id=$lastId'));
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
           final messages = decoded['messages'];
-          if (messages is List) return messages.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          if (messages is List) {
+            return messages.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          }
         }
       }
       return [];
@@ -189,7 +207,6 @@ class ApiService {
     }
   }
 
-  // ===== ОНЛАЙН =====
   static Future<void> sendHeartbeat(String userId) async {
     try {
       await http.post(
@@ -215,7 +232,6 @@ class ApiService {
     return {};
   }
 
-  // ===== НЕПРОЧИТАННЫЕ =====
   static Future<Map<String, int>> fetchUnreadCounts(String userId) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/unread?user_id=$userId'));
@@ -236,14 +252,17 @@ class ApiService {
       await http.post(
         Uri.parse('$baseUrl/mark_read'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'from_user': fromUserId, 'last_read_id': lastReadId}),
+        body: jsonEncode({
+          'user_id': userId,
+          'from_user': fromUserId,
+          'last_read_id': lastReadId
+        }),
       );
     } catch (e) {
       print(e);
     }
   }
 
-  // ===== АДМИНИСТРИРОВАНИЕ =====
   static Future<bool> banUser(String adminId, String userId) async {
     try {
       final response = await http.post(
@@ -272,12 +291,18 @@ class ApiService {
     }
   }
 
-  static Future<bool> reportMessage(String fromUserId, String reportedUserId, String messageId, String reason) async {
+  static Future<bool> reportMessage(String fromUserId, String reportedUserId,
+      String messageId, String reason) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/report_message'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'from_user': fromUserId, 'reported_user': reportedUserId, 'message_id': messageId, 'reason': reason}),
+        body: jsonEncode({
+          'from_user': fromUserId,
+          'reported_user': reportedUserId,
+          'message_id': messageId,
+          'reason': reason
+        }),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -327,7 +352,6 @@ class ApiService {
     return {};
   }
 
-  // ===== NSFW =====
   static Future<bool> checkNsfw(File imageFile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/check_nsfw'));
@@ -343,6 +367,45 @@ class ApiService {
     } catch (e) {
       print('NSFW check exception: $e, allowing upload');
       return true;
+    }
+  }
+
+  // ===== НОВЫЙ МЕТОД УДАЛЕНИЯ СООБЩЕНИЯ =====
+  static Future<bool> deleteMessage({
+    required String userId,
+    required int messageId,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/delete_message'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'message_id': messageId}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Ошибка удаления сообщения: $e');
+      return false;
+    }
+  }
+
+  static Future<String?> uploadPhoto(String imagePath) async {
+    try {
+      final url = Uri.parse('$baseUrl/upload_photo');
+      var request = http.MultipartRequest('POST', url);
+      request.files.add(await http.MultipartFile.fromPath('photo', imagePath));
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final json = jsonDecode(responseData) as Map<String, dynamic>;
+        final photoUrl = json['photo_url'] as String?;
+        return photoUrl;
+      } else {
+        print('Ошибка загрузки фото: статус ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Исключение при загрузке фото: $e');
+      return null;
     }
   }
 }

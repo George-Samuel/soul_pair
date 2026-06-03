@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../services/profile_service.dart';
 import 'path_selection_screen.dart';
 import 'email_registration_screen.dart';
+import 'user_data_collection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,12 +18,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
+  void _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните email и пароль')),
+        const SnackBar(content: Text('Заполните все поля')),
       );
       return;
     }
@@ -57,10 +58,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _googleSignIn() async {
     setState(() => _isLoading = true);
-    final success = await ApiService.signInWithGoogle();
+    final userData = await ApiService.signInWithGoogle();
     setState(() => _isLoading = false);
-    if (success && context.mounted) {
-      // ... переход
+    if (userData != null && userData['user_id'] != null && context.mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UserDataCollectionScreen(
+            userEmail: userData['email'] as String,
+            userPassword: '',
+            googleName: userData['name'] as String?,
+            googleAvatar: userData['picture'] as String?,
+          ),
+        ),
+      );
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось войти через Google')),
+      );
     }
   }
 
@@ -68,7 +83,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Вход')),
-      body: Padding(
+      resizeToAvoidBottomInset: false,
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -92,7 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   ElevatedButton(
                     onPressed: _login,
-                    style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
                     child: const Text('Войти'),
                   ),
                   const SizedBox(height: 12),
@@ -111,7 +129,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const EmailRegistrationScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const EmailRegistrationScreen(),
+                        ),
                       );
                     },
                     child: const Text('Нет аккаунта? Зарегистрироваться'),

@@ -27,7 +27,7 @@
   #  share_plus: ^10.1.2   # или новее
   #  seed_avatar: ^0.0.1  # Последнюю версию смотрите на pub.dev
   #  dice_bear_flutter: ^0.0.1
-
+  # emoji_picker_flutter: ^2.0.0
   #  nsfw_detector_flutter: ^2.0.0
 
   # dependency_overrides:
