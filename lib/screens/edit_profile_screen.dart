@@ -4,13 +4,14 @@ import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
 import '../utils/theme_colors.dart';
-import '../services/pollinations_avatar_service.dart';
+import '../services/openrouter_avatar_service.dart';
 import '../services/media_service.dart';
 import '../services/user_manager.dart';
 import '../data/countries.dart';
 import '../services/storage_path.dart';
 import '../services/favorite_avatars_service.dart';
 import '../services/api_service.dart';
+
 
 class EditProfileScreen extends StatefulWidget {
   final UserProfile initialProfile;
@@ -576,7 +577,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
 
     try {
-      final imageBytes = await PollinationsAvatarService.generateAvatar(prompt);
+      final imageBytes = await OpenRouterAvatarService.generateAvatar(prompt);
       final baseDir = await StoragePath.getFilesDir();
       final avatarsDir = Directory('$baseDir/avatars');
       if (!await avatarsDir.exists()) await avatarsDir.create(recursive: true);
