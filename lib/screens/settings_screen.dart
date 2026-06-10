@@ -48,7 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (profileMap != null) {
         var freshProfile = UserProfile.fromMap(profileMap);
         // Принудительный админ для george (при необходимости)
-        if (freshProfile.id == 'george_at_gmail_dot_com') {
+        if (freshProfile.id == 'electron_dot_geo_at_gmail_dot_com') {
           freshProfile = freshProfile.copyWith(isAdmin: true);
         }
         setState(() {
@@ -757,7 +757,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
 
             // АДМИН-ПАНЕЛЬ (только для администратора)
-            if (_editedProfile.id == 'george_at_gmail_dot_com' || _editedProfile.isAdmin) ...[
+            if (_editedProfile.id == 'electron_dot_geo_at_gmail_dot_com' || _editedProfile.isAdmin) ...[
               const SizedBox(height: 24),
               _buildSection(
                 title: '🔧 Администрирование',

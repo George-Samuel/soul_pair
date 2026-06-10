@@ -6,6 +6,7 @@ import '../services/profile_service.dart';
 import '../services/favorite_users_service.dart';
 import '../models/user_model.dart';
 import 'real_chat_screen.dart';
+import 'matches_screen.dart'; // импорт экрана матчей
 
 class RemoteUsersScreen extends StatefulWidget {
   final String currentUserId;
@@ -92,6 +93,25 @@ class _RemoteUsersScreenState extends State<RemoteUsersScreen> {
     );
   }
 
+  Widget _buildLikeButton(UserProfile user) {
+    return IconButton(
+      icon: const Icon(Icons.thumb_up_alt_outlined, color: Colors.blue),
+      onPressed: () async {
+        final result = await ApiService.likeUser(widget.currentUserId, user.id);
+        if (result['status'] == 'matched') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Взаимная симпатия!'), backgroundColor: Colors.green),
+          );
+        } else if (result['status'] == 'liked') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Симпатия отправлена'), duration: Duration(seconds: 1)),
+          );
+        }
+        setState(() {});
+      },
+    );
+  }
+
   Widget _buildTypeChip(String type) {
     IconData icon;
     Color color;
@@ -133,6 +153,19 @@ class _RemoteUsersScreenState extends State<RemoteUsersScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadUsers,
+            tooltip: 'Обновить',
+          ),
+          IconButton(
+            icon: const Icon(Icons.favorite, color: Colors.red),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MatchesScreen(currentUserId: widget.currentUserId),
+                ),
+              );
+            },
+            tooltip: 'Мои симпатии',
           ),
         ],
       ),
@@ -208,17 +241,22 @@ class _RemoteUsersScreenState extends State<RemoteUsersScreen> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user.email),
-                    if (user.dominantType != null)
+                    if (user.zodiacSign != null && user.zodiacSign.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: _buildTypeChip(user.dominantType!),
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          'Знак: ${user.zodiacSign}',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
                       ),
+                    if (user.dominantType != null)
+                      _buildTypeChip(user.dominantType!),
                   ],
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _buildLikeButton(user),
                     _buildFavoriteButton(user),
                     IconButton(
                       icon: const Icon(Icons.chat),

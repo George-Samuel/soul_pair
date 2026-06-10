@@ -7,6 +7,7 @@ import 'chat_history_screen.dart';
 import '../main.dart';
 import '../utils/theme_colors.dart';
 import 'dart:io';
+import '../screens/support_screen.dart'; // <-- добавлен импорт
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -193,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.chat_bubble_outline), // облачко
+            icon: const Icon(Icons.chat_bubble_outline),
             tooltip: 'История чатов',
             onPressed: () {
               Navigator.push(
@@ -212,6 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Центральная часть с аватаром, именем и типом
               Center(
                 child: Column(
                   children: [
@@ -277,6 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 30),
+              // Карточка с основной информацией
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -284,7 +287,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      _buildProfileItem(context, '📧 Email', profile.email),
+                      if (profile.email != null && profile.email!.isNotEmpty)
+                        _buildProfileItem(context, '📧 Email', profile.email!),
                       if (profile.gender != null && profile.gender!.isNotEmpty)
                         _buildProfileItem(context, '👤 Пол', profile.gender!),
                       if (profile.interests != null && profile.interests!.isNotEmpty)
@@ -304,6 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              // Карточка со статистикой профиля
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -407,6 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               const SizedBox(height: 20),
+              // Карточка "Редактировать профиль" и "Черты характера"
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -433,13 +439,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              // НОВАЯ КАРТОЧКА "ПОДДЕРЖАТЬ ПРОЕКТ"
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: ListTile(
+                  leading: Icon(Icons.favorite, color: Colors.red),
+                  title: Text('Поддержать проект', style: TextStyle(color: ThemeColors.textPrimary(context))),
+                  subtitle: Text('Добровольная помощь проекту', style: TextStyle(color: ThemeColors.textSecondary(context))),
+                  trailing: Icon(Icons.arrow_forward_ios, size: 16, color: ThemeColors.textHint(context)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SupportScreen()),
+                    );
+                  },
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
   }
-
 
   void _showAvatarPicker(BuildContext context) {
     showModalBottomSheet(
@@ -633,7 +657,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-
   }
-
 }

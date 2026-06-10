@@ -370,7 +370,6 @@ class ApiService {
     }
   }
 
-  // ===== НОВЫЙ МЕТОД УДАЛЕНИЯ СООБЩЕНИЯ =====
   static Future<bool> deleteMessage({
     required String userId,
     required int messageId,
@@ -406,6 +405,62 @@ class ApiService {
     } catch (e) {
       print('Исключение при загрузке фото: $e');
       return null;
+    }
+  }
+
+  // ========== НОВЫЕ МЕТОДЫ ДЛЯ ЛАЙКОВ И МАТЧЕЙ ==========
+  static Future<Map<String, dynamic>> likeUser(String fromUserId, String toUserId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/like'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'from_user_id': fromUserId, 'to_user_id': toUserId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        print('Ошибка лайка: ${response.statusCode} - ${response.body}');
+        return {'status': 'error'};
+      }
+    } catch (e) {
+      print('Исключение при лайке: $e');
+      return {'status': 'error'};
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getMatches(String userId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/matches?user_id=$userId'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return (data['matches'] as List).whereType<Map<String, dynamic>>().toList();
+      } else {
+        print('Ошибка получения матчей: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Исключение при получении матчей: $e');
+      return [];
+    }
+  }
+
+  static Future<bool> confirmMatch(String userId, int matchId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/confirm_match'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'match_id': matchId}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return data['status'] == 'confirmed';
+      } else {
+        print('Ошибка подтверждения матча: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Исключение при подтверждении: $e');
+      return false;
     }
   }
 }
